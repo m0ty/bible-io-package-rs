@@ -612,12 +612,12 @@ mod tests {
         let _debug_bible = format!("{:?}", bible);
 
         // If we get here without panicking, the Debug traits work
-        assert!(true);
+        // No assertion needed - if we reach this point, the Debug traits work
     }
 
     #[test]
     fn test_verse_numbering() {
-        let verses = vec![
+        let verses = [
             Verse::new("First verse".to_string(), 1),
             Verse::new("Second verse".to_string(), 2),
             Verse::new("Third verse".to_string(), 3),
@@ -630,7 +630,7 @@ mod tests {
 
     #[test]
     fn test_chapter_numbering() {
-        let chapters = vec![
+        let chapters = [
             Chapter::new(vec![], 1),
             Chapter::new(vec![], 2),
             Chapter::new(vec![], 3),
