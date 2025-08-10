@@ -92,9 +92,10 @@ fn test_bible_book_debug() {
 #[test]
 fn test_bible_book_clone_copy() {
     // Test Clone and Copy traits
-        let book1 = BibleBook::Genesis;
+    let book1 = BibleBook::Genesis;
     let book2 = book1; // Copy
-    let book3 = book1; // Copy (no need for clone)
+    #[allow(clippy::clone_on_copy)]
+    let book3 = book1.clone(); // Clone
     
     assert_eq!(book1, book2);
     assert_eq!(book1, book3);
