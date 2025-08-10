@@ -96,7 +96,7 @@ fn test_bible_book_clone_copy() {
     let book2 = book1; // Copy
     #[allow(clippy::clone_on_copy)]
     let book3 = book1.clone(); // Clone
-    
+
     assert_eq!(book1, book2);
     assert_eq!(book1, book3);
     assert_eq!(book2, book3);
