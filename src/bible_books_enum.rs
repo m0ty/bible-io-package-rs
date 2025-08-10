@@ -5,93 +5,93 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BibleBook {
     // --- Protestant (66) ---
-    Genesis,         // "gn"
-    Exodus,          // "ex"
-    Leviticus,       // "lv"
-    Numbers,         // "nm"
-    Deuteronomy,     // "dt"
-    Joshua,          // "js"
-    Judges,          // "jud"
-    Ruth,            // "rt"
-    FirstSamuel,     // "1sm"
-    SecondSamuel,    // "2sm"
-    FirstKings,      // "1kgs"
-    SecondKings,     // "2kgs"
-    FirstChronicles, // "1ch"
-    SecondChronicles,// "2ch"
-    Ezra,            // "ezr"
-    Nehemiah,        // "ne"
-    Esther,          // "et"
-    Job,             // "job"
-    Psalms,          // "ps"
-    Proverbs,        // "prv"
-    Ecclesiastes,    // "ec"
-    SongOfSolomon,   // "so"
-    Isaiah,          // "is"
-    Jeremiah,        // "jr"
-    Lamentations,    // "lm"
-    Ezekiel,         // "ez"
-    Daniel,          // "dn"
-    Hosea,           // "ho"
-    Joel,            // "jl"
-    Amos,            // "am"
-    Obadiah,         // "ob"
-    Jonah,           // "jn"
-    Micah,           // "mi"
-    Nahum,           // "na"
-    Habakkuk,        // "hk"
-    Zephaniah,       // "zp"
-    Haggai,          // "hg"
-    Zechariah,       // "zc"
-    Malachi,         // "ml"
-    Matthew,         // "mt"
-    Mark,            // "mk"
-    Luke,            // "lk"
-    John,            // "jo"
-    Acts,            // "act"
-    Romans,          // "rm"
-    FirstCorinthians,// "1co"
-    SecondCorinthians,// "2co"
-    Galatians,       // "gl"
-    Ephesians,       // "eph"
-    Philippians,     // "ph"
-    Colossians,      // "cl"
-    FirstThessalonians, // "1ts"
-    SecondThessalonians,// "2ts"
-    FirstTimothy,    // "1tm"
-    SecondTimothy,   // "2tm"
-    Titus,           // "tt"
-    Philemon,        // "phm"
-    Hebrews,         // "hb"
-    James,           // "jm"
-    FirstPeter,      // "1pe"
-    SecondPeter,     // "2pe"
-    FirstJohn,       // "1jo"
-    SecondJohn,      // "2jo"
-    ThirdJohn,       // "3jo"
-    Jude,            // "jd"
-    Revelation,      // "re",
+    Genesis,             // "gn"
+    Exodus,              // "ex"
+    Leviticus,           // "lv"
+    Numbers,             // "nm"
+    Deuteronomy,         // "dt"
+    Joshua,              // "js"
+    Judges,              // "jud"
+    Ruth,                // "rt"
+    FirstSamuel,         // "1sm"
+    SecondSamuel,        // "2sm"
+    FirstKings,          // "1kgs"
+    SecondKings,         // "2kgs"
+    FirstChronicles,     // "1ch"
+    SecondChronicles,    // "2ch"
+    Ezra,                // "ezr"
+    Nehemiah,            // "ne"
+    Esther,              // "et"
+    Job,                 // "job"
+    Psalms,              // "ps"
+    Proverbs,            // "prv"
+    Ecclesiastes,        // "ec"
+    SongOfSolomon,       // "so"
+    Isaiah,              // "is"
+    Jeremiah,            // "jr"
+    Lamentations,        // "lm"
+    Ezekiel,             // "ez"
+    Daniel,              // "dn"
+    Hosea,               // "ho"
+    Joel,                // "jl"
+    Amos,                // "am"
+    Obadiah,             // "ob"
+    Jonah,               // "jn"
+    Micah,               // "mi"
+    Nahum,               // "na"
+    Habakkuk,            // "hk"
+    Zephaniah,           // "zp"
+    Haggai,              // "hg"
+    Zechariah,           // "zc"
+    Malachi,             // "ml"
+    Matthew,             // "mt"
+    Mark,                // "mk"
+    Luke,                // "lk"
+    John,                // "jo"
+    Acts,                // "act"
+    Romans,              // "rm"
+    FirstCorinthians,    // "1co"
+    SecondCorinthians,   // "2co"
+    Galatians,           // "gl"
+    Ephesians,           // "eph"
+    Philippians,         // "ph"
+    Colossians,          // "cl"
+    FirstThessalonians,  // "1ts"
+    SecondThessalonians, // "2ts"
+    FirstTimothy,        // "1tm"
+    SecondTimothy,       // "2tm"
+    Titus,               // "tt"
+    Philemon,            // "phm"
+    Hebrews,             // "hb"
+    James,               // "jm"
+    FirstPeter,          // "1pe"
+    SecondPeter,         // "2pe"
+    FirstJohn,           // "1jo"
+    SecondJohn,          // "2jo"
+    ThirdJohn,           // "3jo"
+    Jude,                // "jd"
+    Revelation,          // "re",
 
     // --- Catholic Deuterocanon ---
-    Tobit,                   // "tb"
-    Judith,                  // "jdt"
-    Wisdom,                  // "ws"    (a.k.a. Wisdom of Solomon)
-    Sirach,                  // "sir"   (a.k.a. Ecclesiasticus)
-    Baruch,                  // "bar"
-    FirstMaccabees,          // "1mc"
-    SecondMaccabees,         // "2mc"
-    EstherAdditions,         // "etg"   (Greek additions to Esther)
-    DanielSongOfThree,       // "dn3"   (Song of the Three Holy Children)
-    DanielSusanna,           // "dns"   (Susanna)
-    DanielBelAndTheDragon,   // "dnb"   (Bel and the Dragon)
+    Tobit,                 // "tb"
+    Judith,                // "jdt"
+    Wisdom,                // "ws"    (a.k.a. Wisdom of Solomon)
+    Sirach,                // "sir"   (a.k.a. Ecclesiasticus)
+    Baruch,                // "bar"
+    FirstMaccabees,        // "1mc"
+    SecondMaccabees,       // "2mc"
+    EstherAdditions,       // "etg"   (Greek additions to Esther)
+    DanielSongOfThree,     // "dn3"   (Song of the Three Holy Children)
+    DanielSusanna,         // "dns"   (Susanna)
+    DanielBelAndTheDragon, // "dnb"   (Bel and the Dragon)
 
     // --- Eastern Orthodox Additions (Anagignoskomena) ---
-    FirstEsdras,             // "1es"
-    SecondEsdras,            // "2es"   (included in some Orthodox/Slavonic traditions)
-    PrayerOfManasseh,        // "pmn"
-    Psalm151,                // "ps151"
-    ThirdMaccabees,          // "3mc"
-    FourthMaccabees,         // "4mc"   (often appendix)
+    FirstEsdras,      // "1es"
+    SecondEsdras,     // "2es"   (included in some Orthodox/Slavonic traditions)
+    PrayerOfManasseh, // "pmn"
+    Psalm151,         // "ps151"
+    ThirdMaccabees,   // "3mc"
+    FourthMaccabees,  // "4mc"   (often appendix)
 }
 
 impl BibleBook {
@@ -204,7 +204,7 @@ impl FromStr for BibleBook {
     type Err = ParseBibleBookError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.to_ascii_lowercase();   // own the lowercase string
+        let s = s.to_ascii_lowercase(); // own the lowercase string
         let s = s.as_str();
 
         let book = match s {
@@ -304,7 +304,6 @@ impl FromStr for BibleBook {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -314,7 +313,7 @@ mod tests {
     fn roundtrip_examples() {
         let codes = [
             ("gn", BibleBook::Genesis),
-            ("JO", BibleBook::John),          // case-insensitive
+            ("JO", BibleBook::John), // case-insensitive
             ("1mc", BibleBook::FirstMaccabees),
             ("ps151", BibleBook::Psalm151),
             ("dns", BibleBook::DanielSusanna),
@@ -330,67 +329,67 @@ mod tests {
     #[test]
     fn reject_unknown() {
         assert!(BibleBook::from_str("xyz").is_err());
-    }}
-
-
-    #[test]
-    fn test_bible_book_as_str() {
-        assert_eq!(BibleBook::Genesis.as_str(), "gn");
-        assert_eq!(BibleBook::Exodus.as_str(), "ex");
-        assert_eq!(BibleBook::Psalms.as_str(), "ps");
-        assert_eq!(BibleBook::Matthew.as_str(), "mt");
-        assert_eq!(BibleBook::Revelation.as_str(), "re");
     }
+}
 
-    #[test]
-    fn test_bible_book_display() {
-        assert_eq!(format!("{}", BibleBook::Genesis), "gn");
-        assert_eq!(format!("{}", BibleBook::Psalms), "ps");
-        assert_eq!(format!("{}", BibleBook::Revelation), "re");
-    }
+#[test]
+fn test_bible_book_as_str() {
+    assert_eq!(BibleBook::Genesis.as_str(), "gn");
+    assert_eq!(BibleBook::Exodus.as_str(), "ex");
+    assert_eq!(BibleBook::Psalms.as_str(), "ps");
+    assert_eq!(BibleBook::Matthew.as_str(), "mt");
+    assert_eq!(BibleBook::Revelation.as_str(), "re");
+}
 
-    #[test]
-    fn test_bible_book_from_str() {
-        assert_eq!(BibleBook::from_str("gn"), Ok(BibleBook::Genesis));
-        assert_eq!(BibleBook::from_str("ps"), Ok(BibleBook::Psalms));
-        assert_eq!(BibleBook::from_str("mt"), Ok(BibleBook::Matthew));
-        assert_eq!(BibleBook::from_str("re"), Ok(BibleBook::Revelation));
-        
-        // Test invalid strings
-        assert_eq!(BibleBook::from_str("invalid"), Err(ParseBibleBookError));
-        assert_eq!(BibleBook::from_str(""), Err(ParseBibleBookError));
-    }
+#[test]
+fn test_bible_book_display() {
+    assert_eq!(format!("{}", BibleBook::Genesis), "gn");
+    assert_eq!(format!("{}", BibleBook::Psalms), "ps");
+    assert_eq!(format!("{}", BibleBook::Revelation), "re");
+}
 
-    #[test]
-    fn test_bible_book_debug() {
-        // Test that Debug trait works
-        let book = BibleBook::Genesis;
-        let debug_str = format!("{:?}", book);
-        assert!(debug_str.contains("Genesis"));
-    }
+#[test]
+fn test_bible_book_from_str() {
+    assert_eq!(BibleBook::from_str("gn"), Ok(BibleBook::Genesis));
+    assert_eq!(BibleBook::from_str("ps"), Ok(BibleBook::Psalms));
+    assert_eq!(BibleBook::from_str("mt"), Ok(BibleBook::Matthew));
+    assert_eq!(BibleBook::from_str("re"), Ok(BibleBook::Revelation));
 
-    #[test]
-    fn test_bible_book_clone_copy() {
-        // Test Clone and Copy traits
-        let book1 = BibleBook::Genesis;
-        let book2 = book1; // Copy
-        let book3 = book1.clone(); // Clone
-        
-        assert_eq!(book1, book2);
-        assert_eq!(book1, book3);
-        assert_eq!(book2, book3);
-    }
+    // Test invalid strings
+    assert_eq!(BibleBook::from_str("invalid"), Err(ParseBibleBookError));
+    assert_eq!(BibleBook::from_str(""), Err(ParseBibleBookError));
+}
 
-    #[test]
-    fn test_specific_book_abbreviations() {
-        // Test some specific abbreviations to ensure they're correct
-        assert_eq!(BibleBook::FirstSamuel.as_str(), "1sm");
-        assert_eq!(BibleBook::SecondSamuel.as_str(), "2sm");
-        assert_eq!(BibleBook::FirstKings.as_str(), "1kgs");
-        assert_eq!(BibleBook::SecondKings.as_str(), "2kgs");
-        assert_eq!(BibleBook::FirstCorinthians.as_str(), "1co");
-        assert_eq!(BibleBook::SecondCorinthians.as_str(), "2co");
-        assert_eq!(BibleBook::FirstJohn.as_str(), "1jo");
-        assert_eq!(BibleBook::SecondJohn.as_str(), "2jo");
-        assert_eq!(BibleBook::ThirdJohn.as_str(), "3jo");
-    }
+#[test]
+fn test_bible_book_debug() {
+    // Test that Debug trait works
+    let book = BibleBook::Genesis;
+    let debug_str = format!("{:?}", book);
+    assert!(debug_str.contains("Genesis"));
+}
+
+#[test]
+fn test_bible_book_clone_copy() {
+    // Test Clone and Copy traits
+    let book1 = BibleBook::Genesis;
+    let book2 = book1; // Copy
+    let book3 = book1.clone(); // Clone
+
+    assert_eq!(book1, book2);
+    assert_eq!(book1, book3);
+    assert_eq!(book2, book3);
+}
+
+#[test]
+fn test_specific_book_abbreviations() {
+    // Test some specific abbreviations to ensure they're correct
+    assert_eq!(BibleBook::FirstSamuel.as_str(), "1sm");
+    assert_eq!(BibleBook::SecondSamuel.as_str(), "2sm");
+    assert_eq!(BibleBook::FirstKings.as_str(), "1kgs");
+    assert_eq!(BibleBook::SecondKings.as_str(), "2kgs");
+    assert_eq!(BibleBook::FirstCorinthians.as_str(), "1co");
+    assert_eq!(BibleBook::SecondCorinthians.as_str(), "2co");
+    assert_eq!(BibleBook::FirstJohn.as_str(), "1jo");
+    assert_eq!(BibleBook::SecondJohn.as_str(), "2jo");
+    assert_eq!(BibleBook::ThirdJohn.as_str(), "3jo");
+}
