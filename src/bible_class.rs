@@ -348,7 +348,6 @@ impl Bible {
     /// This function will panic if the file cannot be read or if the JSON
     /// cannot be parsed. The JSON should have the structure where each book
     /// is a key with an object containing "name" and "chapters" fields.
-
     pub fn new_from_json(json_path: &str) -> Self {
         let mut file_content = fs::read_to_string(json_path)
             .expect("Failed to read the file. Make sure the path is correct.");
