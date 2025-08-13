@@ -213,10 +213,21 @@ pub struct Bible {
 }
 
 impl Bible {
-    pub fn id(&self) -> &str { &self.id }
-    pub fn name(&self) -> &str { &self.name }
-    pub fn description(&self) -> &str { &self.description }
-    pub fn language(&self) -> &str { &self.language }
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn description(&self) -> &str {
+        &self.description
+    }
+
+    pub fn language(&self) -> &str {
+        &self.language
+    }
 
     /// Returns a book by its BibleBook enum value.
     ///
@@ -364,22 +375,25 @@ mod tests {
 
     #[test]
     fn test_bible_parse_new_wrapped_format() {
-        let mut json = r#"
-    {
-        "id": "en-kjv",
-        "name": "King James Version",
-        "description": "King James Version of the Holy Bible",
-        "language": "English",
-        "books": {
-            "gn": {
-                "name": "Genesis",
-                "chapters": [
-                    ["Verse 1", "Verse 2"],
-                    ["Verse 1"]
-                ]
+        let mut json = String::from(
+            r#"
+        {
+            "id": "en-kjv",
+            "name": "King James Version",
+            "description": "King James Version of the Holy Bible",
+            "language": "English",
+            "books": {
+                "gn": {
+                    "name": "Genesis",
+                    "chapters": [
+                        ["Verse 1", "Verse 2"],
+                        ["Verse 1"]
+                    ]
+                }
             }
         }
-    }"#.to_string();
+        "#,
+        );
 
         let root: BibleFileRoot = unsafe { simd_from_str(&mut json).unwrap() };
 
@@ -392,7 +406,7 @@ mod tests {
             root.language,
         );
 
-        // Metadata assertions
+        // Metadata assertions (optional)
         assert_eq!(bible.id(), "en-kjv");
         assert_eq!(bible.name(), "King James Version");
         assert_eq!(bible.description(), "King James Version of the Holy Bible");
