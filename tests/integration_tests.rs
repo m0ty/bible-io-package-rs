@@ -31,7 +31,7 @@ fn test_bible_book_enum_import() {
 #[test]
 fn test_bible_creation_with_real_data() {
     // This test requires the bbe.json file to exist
-    let file_path = match test_utils::get_bbe_json() {
+    let file_path = match test_utils::get_kjv_json() {
         Some(path) => path,
         None => {
             // Skip the test if the file doesn't exist

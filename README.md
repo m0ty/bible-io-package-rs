@@ -7,8 +7,6 @@ A Rust library for working with Bible text data structures, providing efficient 
 - Parse Bible data from JSON files
 - Access books, chapters, and verses by various identifiers
 - Type-safe Bible book enumeration
-- Efficient data structures with O(1) lookup times
-- Serde integration for JSON serialization/deserialization
 
 ## Usage
 

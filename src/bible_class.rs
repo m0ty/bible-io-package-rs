@@ -8,6 +8,15 @@ use simd_json::serde::from_str as simd_from_str;
 
 use crate::bible_books_enum::BibleBook;
 
+#[derive(Deserialize, Debug)]
+struct BibleFileRoot {
+    id: String,
+    name: String,
+    description: String,
+    language: String,
+    books: IndexMap<String, FileDataEntry>,
+}
+
 /// Internal structure for deserializing JSON data from Bible files.
 #[derive(Serialize, Deserialize, Debug)]
 struct FileDataEntry {
@@ -192,16 +201,23 @@ impl fmt::Display for Book {
 /// Represents the complete Bible with all books, chapters, and verses.
 ///
 /// The Bible struct provides efficient access to any verse, chapter, or book
-/// using O(1) lookup times for book access by abbreviation.
 #[derive(Debug)]
 pub struct Bible {
-    // Preserves the JSON order
     books: Vec<Book>,
-    // Abbrev -> index in `books` (for O(1) lookup by key)
     index_by_abbrev: HashMap<String, usize>,
+
+    id: String,
+    name: String,
+    description: String,
+    language: String,
 }
 
 impl Bible {
+    pub fn id(&self) -> &str { &self.id }
+    pub fn name(&self) -> &str { &self.name }
+    pub fn description(&self) -> &str { &self.description }
+    pub fn language(&self) -> &str { &self.language }
+
     /// Returns a book by its BibleBook enum value.
     ///
     /// # Arguments
@@ -266,28 +282,32 @@ impl Bible {
             .and_then(|b| b.get_verse(chapter_number, verse_number))
     }
 
-    fn new_from_map(map: IndexMap<String, FileDataEntry>) -> Self {
+    fn new_from_map_with_meta(
+        map: IndexMap<String, FileDataEntry>,
+        id: String,
+        name: String,
+        description: String,
+        language: String,
+    ) -> Self {
         // Iterate in map order (IndexMap preserves insertion order)
         let mut books = Vec::with_capacity(map.len());
 
-        for (abbrev, entry) in map.iter() {
+        for (abbrev, entry) in map.into_iter() {
             let chapters = entry
                 .chapters
-                .iter()
+                .into_iter()
                 .enumerate()
                 .map(|(chapter_idx, verses)| {
                     let verses = verses
-                        .iter()
+                        .into_iter()
                         .enumerate()
-                        .map(|(verse_idx, verse_text)| {
-                            Verse::new(verse_text.clone(), verse_idx + 1)
-                        })
-                        .collect();
+                        .map(|(verse_idx, verse_text)| Verse::new(verse_text, verse_idx + 1))
+                        .collect::<Vec<_>>();
                     Chapter::new(verses, chapter_idx + 1)
                 })
                 .collect::<Vec<_>>();
 
-            books.push(Book::new(abbrev.clone(), entry.name.clone(), chapters));
+            books.push(Book::new(abbrev, entry.name, chapters));
         }
 
         // Build abbrev index
@@ -299,6 +319,10 @@ impl Bible {
         Bible {
             books,
             index_by_abbrev,
+            id,
+            name,
+            description,
+            language,
         }
     }
 
@@ -313,18 +337,23 @@ impl Bible {
     /// This function will panic if the file cannot be read or if the JSON
     /// cannot be parsed. The JSON should have the structure where each book
     /// is a key with an object containing "name" and "chapters" fields.
+
     pub fn new_from_json(json_path: &str) -> Self {
-        // Read entire file into a mutable String
         let mut file_content = fs::read_to_string(json_path)
             .expect("Failed to read the file. Make sure the path is correct.");
 
-        // Parse via SIMD-accelerated serde adapter into an IndexMap to preserve order
-        let parsed: IndexMap<String, FileDataEntry> = unsafe {
+        let root: BibleFileRoot = unsafe {
             simd_from_str(&mut file_content)
                 .expect("Failed to parse JSON with simd-json. Check structure & CPU features.")
         };
 
-        Bible::new_from_map(parsed)
+        Bible::new_from_map_with_meta(
+            root.books,
+            root.id,
+            root.name,
+            root.description,
+            root.language,
+        )
     }
 }
 
@@ -332,6 +361,49 @@ impl Bible {
 mod tests {
     use super::*;
     use crate::bible_books_enum::BibleBook;
+
+    #[test]
+    fn test_bible_parse_new_wrapped_format() {
+        let mut json = r#"
+    {
+        "id": "en-kjv",
+        "name": "King James Version",
+        "description": "King James Version of the Holy Bible",
+        "language": "English",
+        "books": {
+            "gn": {
+                "name": "Genesis",
+                "chapters": [
+                    ["Verse 1", "Verse 2"],
+                    ["Verse 1"]
+                ]
+            }
+        }
+    }"#.to_string();
+
+        let root: BibleFileRoot = unsafe { simd_from_str(&mut json).unwrap() };
+
+        // Build Bible with metadata populated
+        let bible = Bible::new_from_map_with_meta(
+            root.books,
+            root.id,
+            root.name,
+            root.description,
+            root.language,
+        );
+
+        // Metadata assertions
+        assert_eq!(bible.id(), "en-kjv");
+        assert_eq!(bible.name(), "King James Version");
+        assert_eq!(bible.description(), "King James Version of the Holy Bible");
+        assert_eq!(bible.language(), "English");
+
+        // Content assertions
+        let gn = bible.get_book_by_abbrev("gn").unwrap();
+        assert_eq!(gn.title(), "Genesis");
+        assert_eq!(gn.get_chapter(1).unwrap().get_verses().len(), 2);
+        assert_eq!(gn.get_chapter(2).unwrap().get_verses().len(), 1);
+    }
 
     fn create_test_verse() -> Verse {
         Verse::new(
@@ -370,9 +442,14 @@ mod tests {
         let book = create_test_book();
         let mut index_by_abbrev = HashMap::new();
         index_by_abbrev.insert("gn".to_string(), 0);
+
         Bible {
             books: vec![book],
             index_by_abbrev,
+            id: "en-kjv".to_string(),
+            name: "King James Version".to_string(),
+            description: "Test Bible".to_string(),
+            language: "English".to_string(),
         }
     }
 
@@ -589,7 +666,21 @@ mod tests {
             },
         );
 
-        let bible = Bible::new_from_map(map);
+        // Build via the helper and keep metadata empty (matches prior semantics)
+        let bible = Bible::new_from_map_with_meta(
+            map,
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+        );
+
+        // If you have getters; otherwise assert fields directly.
+        assert_eq!(bible.id(), "");
+        assert_eq!(bible.name(), "");
+        assert_eq!(bible.description(), "");
+        assert_eq!(bible.language(), "");
+
         assert_eq!(bible.books.len(), 1);
         assert_eq!(bible.books[0].abbrev(), "gn");
         assert_eq!(bible.books[0].title(), "Genesis");

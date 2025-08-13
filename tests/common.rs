@@ -4,9 +4,8 @@ use std::path::Path;
 pub mod test_utils {
     use super::*;
 
-    /// Helper function to find the bbe.json file
-    pub fn get_bbe_json() -> Option<String> {
-        let test_fixtures_path = "tests/fixtures/bbe.json";
+    pub fn get_kjv_json() -> Option<String> {
+        let test_fixtures_path = "tests/fixtures/en_kjv.json";
         if Path::new(test_fixtures_path).exists() {
             return Some(test_fixtures_path.to_string());
         }
