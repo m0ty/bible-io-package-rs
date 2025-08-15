@@ -5,7 +5,8 @@ fn main() {
 
     let bible: Bible = Bible::new_from_json(file_path);
 
-    let verse = bible.get_verse(BibleBook::Genesis, 1, 1).unwrap();
-
-    println!("{}", verse);
+    match bible.get_verse(BibleBook::Genesis, 1, 1) {
+        Ok(verse) => println!("{}", verse),
+        Err(e) => eprintln!("Error: {}", e),
+    }
 }

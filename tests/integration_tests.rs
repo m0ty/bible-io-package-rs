@@ -49,7 +49,7 @@ fn test_bible_creation_with_real_data() {
     let bible = Bible::new_from_json(&file_path);
 
     // Test that we can get a verse from Genesis
-    if let Some(verse) = bible.get_verse(BibleBook::Genesis, 1, 1) {
+    if let Ok(verse) = bible.get_verse(BibleBook::Genesis, 1, 1) {
         // We can't access private fields, but we can test the Display trait
         let verse_str = format!("{}", verse);
         assert_eq!(
@@ -59,7 +59,7 @@ fn test_bible_creation_with_real_data() {
     }
 
     // Test that we can get a book
-    if let Some(book) = bible.get_book(BibleBook::Genesis) {
+    if let Ok(book) = bible.get_book(BibleBook::Genesis) {
         assert_eq!(book.abbrev(), "gn");
         assert_eq!(book.title(), "Genesis");
     }

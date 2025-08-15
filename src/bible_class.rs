@@ -8,6 +8,63 @@ use simd_json::serde::from_str as simd_from_str;
 
 use crate::bible_books_enum::BibleBook;
 
+/// Errors that can occur when accessing Bible content.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BibleError {
+    /// The requested book is not present in the specified Bible translation.
+    BookNotFound { book: String, translation: String },
+    /// The requested chapter number does not exist in the specified book.
+    ChapterOutOfBounds {
+        book: String,
+        chapter: usize,
+        max_chapter: usize,
+    },
+    /// The requested verse number does not exist in the specified chapter of the book.
+    VerseOutOfBounds {
+        book: String,
+        chapter: usize,
+        verse: usize,
+        max_verse: usize,
+    },
+}
+
+impl fmt::Display for BibleError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BibleError::BookNotFound { book, translation } => {
+                write!(
+                    f,
+                    "Book '{}' not found in the '{}' Bible translation",
+                    book, translation
+                )
+            }
+            BibleError::ChapterOutOfBounds {
+                book,
+                chapter,
+                max_chapter,
+            } => {
+                write!(
+                    f,
+                    "Chapter {} is out of bounds for book '{}' (max {})",
+                    chapter, book, max_chapter
+                )
+            }
+            BibleError::VerseOutOfBounds {
+                book,
+                chapter,
+                verse,
+                max_verse,
+            } => {
+                write!(
+                    f,
+                    "Verse {} is out of bounds for book '{}' chapter {} (max {})",
+                    verse, book, chapter, max_verse
+                )
+            }
+        }
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct BibleFileRoot {
     id: String,
@@ -156,11 +213,16 @@ impl Book {
     ///
     /// # Returns
     ///
-    /// An optional reference to the chapter if found, None otherwise.
-    pub fn get_chapter(&self, chapter_number: usize) -> Option<&Chapter> {
+    /// The requested chapter or a descriptive error if the chapter number is invalid.
+    pub fn get_chapter(&self, chapter_number: usize) -> Result<&Chapter, BibleError> {
         self.chapters
             .iter()
             .find(|c| c.chapter_number == chapter_number)
+            .ok_or_else(|| BibleError::ChapterOutOfBounds {
+                book: self.abbrev.clone(),
+                chapter: chapter_number,
+                max_chapter: self.chapters.len(),
+            })
     }
 
     /// Returns all verses from a specific chapter.
@@ -171,8 +233,8 @@ impl Book {
     ///
     /// # Returns
     ///
-    /// An optional reference to the vector of verses if the chapter exists, None otherwise.
-    pub fn get_verses(&self, chapter_number: usize) -> Option<&Vec<Verse>> {
+    /// The verses from the requested chapter or a descriptive error.
+    pub fn get_verses(&self, chapter_number: usize) -> Result<&Vec<Verse>, BibleError> {
         self.get_chapter(chapter_number).map(|c| c.get_verses())
     }
 
@@ -185,10 +247,21 @@ impl Book {
     ///
     /// # Returns
     ///
-    /// An optional reference to the verse if found, None otherwise.
-    pub fn get_verse(&self, chapter_number: usize, verse_number: usize) -> Option<&Verse> {
-        self.get_chapter(chapter_number)
-            .and_then(|c| c.get_verse(verse_number))
+    /// The requested verse or a descriptive error if the chapter or verse is invalid.
+    pub fn get_verse(
+        &self,
+        chapter_number: usize,
+        verse_number: usize,
+    ) -> Result<&Verse, BibleError> {
+        let chapter = self.get_chapter(chapter_number)?;
+        chapter
+            .get_verse(verse_number)
+            .ok_or_else(|| BibleError::VerseOutOfBounds {
+                book: self.abbrev.clone(),
+                chapter: chapter_number,
+                verse: verse_number,
+                max_verse: chapter.get_verses().len(),
+            })
     }
 }
 
@@ -237,8 +310,8 @@ impl Bible {
     ///
     /// # Returns
     ///
-    /// An optional reference to the book if found, None otherwise.
-    pub fn get_book(&self, book: BibleBook) -> Option<&Book> {
+    /// The requested book or a descriptive error if it is not present in this translation.
+    pub fn get_book(&self, book: BibleBook) -> Result<&Book, BibleError> {
         self.get_book_by_abbrev(book.as_str())
     }
 
@@ -250,12 +323,16 @@ impl Bible {
     ///
     /// # Returns
     ///
-    /// An optional reference to the book if found, None otherwise.
-    pub fn get_book_by_abbrev(&self, abbrev: &str) -> Option<&Book> {
+    /// The requested book or a descriptive error if it is not present in this translation.
+    pub fn get_book_by_abbrev(&self, abbrev: &str) -> Result<&Book, BibleError> {
         let key = abbrev.to_ascii_lowercase();
         self.index_by_abbrev
             .get(key.as_str())
             .and_then(|&i| self.books.get(i))
+            .ok_or_else(|| BibleError::BookNotFound {
+                book: key,
+                translation: self.name.clone(),
+            })
     }
 
     /// Returns all verses from a specific book and chapter.
@@ -267,10 +344,13 @@ impl Bible {
     ///
     /// # Returns
     ///
-    /// An optional reference to the vector of verses if found, None otherwise.
-    pub fn get_verses(&self, book: BibleBook, chapter_number: usize) -> Option<&Vec<Verse>> {
-        self.get_book(book)
-            .and_then(|b| b.get_verses(chapter_number))
+    /// The verses from the requested chapter or a descriptive error.
+    pub fn get_verses(
+        &self,
+        book: BibleBook,
+        chapter_number: usize,
+    ) -> Result<&Vec<Verse>, BibleError> {
+        self.get_book(book)?.get_verses(chapter_number)
     }
 
     /// Returns a specific verse by book, chapter, and verse number.
@@ -283,15 +363,14 @@ impl Bible {
     ///
     /// # Returns
     ///
-    /// An optional reference to the verse if found, None otherwise.
+    /// The requested verse or a descriptive error if the book, chapter, or verse is invalid.
     pub fn get_verse(
         &self,
         book: BibleBook,
         chapter_number: usize,
         verse_number: usize,
-    ) -> Option<&Verse> {
-        self.get_book(book)
-            .and_then(|b| b.get_verse(chapter_number, verse_number))
+    ) -> Result<&Verse, BibleError> {
+        self.get_book(book)?.get_verse(chapter_number, verse_number)
     }
 
     fn new_from_map_with_meta(
@@ -541,13 +620,12 @@ mod tests {
         let book = create_test_book();
 
         // Test valid chapter
-        let chapter = book.get_chapter(1);
-        assert!(chapter.is_some());
-        assert_eq!(chapter.unwrap().chapter_number, 1);
+        let chapter = book.get_chapter(1).unwrap();
+        assert_eq!(chapter.chapter_number, 1);
 
         // Test invalid chapter
-        let chapter = book.get_chapter(99);
-        assert!(chapter.is_none());
+        let err = book.get_chapter(99).unwrap_err();
+        assert!(matches!(err, BibleError::ChapterOutOfBounds { .. }));
     }
 
     #[test]
@@ -555,13 +633,12 @@ mod tests {
         let book = create_test_book();
 
         // Test valid chapter
-        let verses = book.get_verses(1);
-        assert!(verses.is_some());
-        assert_eq!(verses.unwrap().len(), 3);
+        let verses = book.get_verses(1).unwrap();
+        assert_eq!(verses.len(), 3);
 
         // Test invalid chapter
-        let verses = book.get_verses(99);
-        assert!(verses.is_none());
+        let err = book.get_verses(99).unwrap_err();
+        assert!(matches!(err, BibleError::ChapterOutOfBounds { .. }));
     }
 
     #[test]
@@ -569,17 +646,16 @@ mod tests {
         let book = create_test_book();
 
         // Test valid verse
-        let verse = book.get_verse(1, 2);
-        assert!(verse.is_some());
-        assert_eq!(verse.unwrap().verse_number, 2);
+        let verse = book.get_verse(1, 2).unwrap();
+        assert_eq!(verse.verse_number, 2);
 
         // Test invalid chapter
-        let verse = book.get_verse(99, 1);
-        assert!(verse.is_none());
+        let err = book.get_verse(99, 1).unwrap_err();
+        assert!(matches!(err, BibleError::ChapterOutOfBounds { .. }));
 
         // Test invalid verse
-        let verse = book.get_verse(1, 99);
-        assert!(verse.is_none());
+        let err = book.get_verse(1, 99).unwrap_err();
+        assert!(matches!(err, BibleError::VerseOutOfBounds { .. }));
     }
 
     #[test]
@@ -601,13 +677,16 @@ mod tests {
         let bible = create_test_bible();
 
         // Test valid book
-        let book = bible.get_book(BibleBook::Genesis);
-        assert!(book.is_some());
-        assert_eq!(book.unwrap().abbrev(), "gn");
+        let book = bible.get_book(BibleBook::Genesis).unwrap();
+        assert_eq!(book.abbrev(), "gn");
 
         // Test invalid book
-        let book = bible.get_book(BibleBook::Exodus);
-        assert!(book.is_none());
+        let err = bible.get_book(BibleBook::Exodus).unwrap_err();
+        if let BibleError::BookNotFound { translation, .. } = err {
+            assert_eq!(translation, "King James Version");
+        } else {
+            panic!("Expected BookNotFound error");
+        }
     }
 
     #[test]
@@ -615,18 +694,16 @@ mod tests {
         let bible = create_test_bible();
 
         // Test valid abbreviation
-        let book = bible.get_book_by_abbrev("gn");
-        assert!(book.is_some());
-        assert_eq!(book.unwrap().title(), "Genesis");
+        let book = bible.get_book_by_abbrev("gn").unwrap();
+        assert_eq!(book.title(), "Genesis");
 
         // Test case-insensitive lookup
-        let book = bible.get_book_by_abbrev("GN");
-        assert!(book.is_some());
-        assert_eq!(book.unwrap().title(), "Genesis");
+        let book = bible.get_book_by_abbrev("GN").unwrap();
+        assert_eq!(book.title(), "Genesis");
 
         // Test invalid abbreviation
-        let book = bible.get_book_by_abbrev("ex");
-        assert!(book.is_none());
+        let err = bible.get_book_by_abbrev("ex").unwrap_err();
+        assert!(matches!(err, BibleError::BookNotFound { .. }));
     }
 
     #[test]
@@ -634,17 +711,16 @@ mod tests {
         let bible = create_test_bible();
 
         // Test valid book and chapter
-        let verses = bible.get_verses(BibleBook::Genesis, 1);
-        assert!(verses.is_some());
-        assert_eq!(verses.unwrap().len(), 3);
+        let verses = bible.get_verses(BibleBook::Genesis, 1).unwrap();
+        assert_eq!(verses.len(), 3);
 
         // Test invalid book
-        let verses = bible.get_verses(BibleBook::Exodus, 1);
-        assert!(verses.is_none());
+        let err = bible.get_verses(BibleBook::Exodus, 1).unwrap_err();
+        assert!(matches!(err, BibleError::BookNotFound { .. }));
 
         // Test invalid chapter
-        let verses = bible.get_verses(BibleBook::Genesis, 99);
-        assert!(verses.is_none());
+        let err = bible.get_verses(BibleBook::Genesis, 99).unwrap_err();
+        assert!(matches!(err, BibleError::ChapterOutOfBounds { .. }));
     }
 
     #[test]
@@ -652,21 +728,20 @@ mod tests {
         let bible = create_test_bible();
 
         // Test valid verse
-        let verse = bible.get_verse(BibleBook::Genesis, 1, 2);
-        assert!(verse.is_some());
-        assert_eq!(verse.unwrap().verse_number, 2);
+        let verse = bible.get_verse(BibleBook::Genesis, 1, 2).unwrap();
+        assert_eq!(verse.verse_number, 2);
 
         // Test invalid book
-        let verse = bible.get_verse(BibleBook::Exodus, 1, 1);
-        assert!(verse.is_none());
+        let err = bible.get_verse(BibleBook::Exodus, 1, 1).unwrap_err();
+        assert!(matches!(err, BibleError::BookNotFound { .. }));
 
         // Test invalid chapter
-        let verse = bible.get_verse(BibleBook::Genesis, 99, 1);
-        assert!(verse.is_none());
+        let err = bible.get_verse(BibleBook::Genesis, 99, 1).unwrap_err();
+        assert!(matches!(err, BibleError::ChapterOutOfBounds { .. }));
 
         // Test invalid verse
-        let verse = bible.get_verse(BibleBook::Genesis, 1, 99);
-        assert!(verse.is_none());
+        let err = bible.get_verse(BibleBook::Genesis, 1, 99).unwrap_err();
+        assert!(matches!(err, BibleError::VerseOutOfBounds { .. }));
     }
 
     #[test]
