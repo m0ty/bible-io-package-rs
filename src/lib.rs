@@ -8,4 +8,4 @@ pub mod bible_class;
 
 // Re-export main types for easier access
 pub use bible_books_enum::BibleBook;
-pub use bible_class::{Bible, Book, Chapter, Verse};
+pub use bible_class::{Bible, BibleError, Book, Chapter, Verse};

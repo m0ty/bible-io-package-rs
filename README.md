@@ -26,12 +26,12 @@ fn main() {
     let bible = Bible::new_from_json("path/to/bible.json");
     
     // Get a specific verse
-    if let Some(verse) = bible.get_verse(BibleBook::Genesis, 1, 1) {
+    if let Ok(verse) = bible.get_verse(BibleBook::Genesis, 1, 1) {
         println!("{}", verse);
     }
-    
+
     // Get all verses from a chapter
-    if let Some(verses) = bible.get_verses(BibleBook::Psalms, 23) {
+    if let Ok(verses) = bible.get_verses(BibleBook::Psalms, 23) {
         for verse in verses {
             println!("{}", verse);
         }
