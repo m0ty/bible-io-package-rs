@@ -30,13 +30,13 @@ fn test_bible_book_enum_import() {
 
 #[test]
 fn test_bible_creation_with_real_data() {
-    // This test requires the bbe.json file to exist
+    // This test requires the en_kjv.json file to exist
     let file_path = match test_utils::get_kjv_json() {
         Some(path) => path,
         None => {
             // Skip the test if the file doesn't exist
-            println!("Skipping test_bible_creation_with_real_data: bbe.json not found");
-            println!("To run this test, place bbe.json in one of these locations:");
+            println!("Skipping test_bible_creation_with_real_data: en_kjv.json not found");
+            println!("To run this test, place en_kjv.json in one of these locations:");
             println!("  1. tests/fixtures/ (recommended)");
             println!("  2. tests/ directory");
             println!("  3. Project root directory");
@@ -44,7 +44,7 @@ fn test_bible_creation_with_real_data() {
         }
     };
 
-    println!("Using bbe.json at: {}", file_path);
+    println!("Using en_kjv.json at: {}", file_path);
 
     let bible = Bible::new_from_json(&file_path);
 
