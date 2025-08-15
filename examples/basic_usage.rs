@@ -1,7 +1,7 @@
 use rust_bible_struct::{Bible, BibleBook};
 
 fn main() {
-    let file_path = "tests/fixtures/bbe.json";
+    let file_path = "tests/fixtures/en_kjv.json";
 
     let bible: Bible = Bible::new_from_json(file_path);
 
