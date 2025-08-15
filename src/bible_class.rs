@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
+use std::str::FromStr;
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -12,16 +13,22 @@ use crate::bible_books_enum::BibleBook;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BibleError {
     /// The requested book is not present in the specified Bible translation.
-    BookNotFound { book: String, translation: String },
+    BookNotFound {
+        book_abbrev: String,
+        book_name: String,
+        translation: String,
+    },
     /// The requested chapter number does not exist in the specified book.
     ChapterOutOfBounds {
-        book: String,
+        book_abbrev: String,
+        book_name: String,
         chapter: usize,
         max_chapter: usize,
     },
     /// The requested verse number does not exist in the specified chapter of the book.
     VerseOutOfBounds {
-        book: String,
+        book_abbrev: String,
+        book_name: String,
         chapter: usize,
         verse: usize,
         max_verse: usize,
@@ -31,34 +38,40 @@ pub enum BibleError {
 impl fmt::Display for BibleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BibleError::BookNotFound { book, translation } => {
+            BibleError::BookNotFound {
+                book_abbrev,
+                book_name,
+                translation,
+            } => {
                 write!(
                     f,
-                    "Book '{}' not found in the '{}' Bible translation",
-                    book, translation
+                    "Book {} ('{}') not found in the '{}' Bible translation",
+                    book_name, book_abbrev, translation
                 )
             }
             BibleError::ChapterOutOfBounds {
-                book,
+                book_abbrev,
+                book_name,
                 chapter,
                 max_chapter,
             } => {
                 write!(
                     f,
-                    "Chapter {} is out of bounds for book '{}' (max {})",
-                    chapter, book, max_chapter
+                    "Chapter {} is out of bounds for book {} ('{}') (max {})",
+                    chapter, book_name, book_abbrev, max_chapter
                 )
             }
             BibleError::VerseOutOfBounds {
-                book,
+                book_abbrev,
+                book_name,
                 chapter,
                 verse,
                 max_verse,
             } => {
                 write!(
                     f,
-                    "Verse {} is out of bounds for book '{}' chapter {} (max {})",
-                    verse, book, chapter, max_verse
+                    "Verse {} is out of bounds for book {} ('{}') chapter {} (max {})",
+                    verse, book_name, book_abbrev, chapter, max_verse
                 )
             }
         }
@@ -219,7 +232,8 @@ impl Book {
             .iter()
             .find(|c| c.chapter_number == chapter_number)
             .ok_or_else(|| BibleError::ChapterOutOfBounds {
-                book: self.abbrev.clone(),
+                book_abbrev: self.abbrev.clone(),
+                book_name: self.title.clone(),
                 chapter: chapter_number,
                 max_chapter: self.chapters.len(),
             })
@@ -257,7 +271,8 @@ impl Book {
         chapter
             .get_verse(verse_number)
             .ok_or_else(|| BibleError::VerseOutOfBounds {
-                book: self.abbrev.clone(),
+                book_abbrev: self.abbrev.clone(),
+                book_name: self.title.clone(),
                 chapter: chapter_number,
                 verse: verse_number,
                 max_verse: chapter.get_verses().len(),
@@ -329,9 +344,15 @@ impl Bible {
         self.index_by_abbrev
             .get(key.as_str())
             .and_then(|&i| self.books.get(i))
-            .ok_or_else(|| BibleError::BookNotFound {
-                book: key,
-                translation: self.name.clone(),
+            .ok_or_else(|| {
+                let book_name = BibleBook::from_str(&key)
+                    .map(|b| b.full_name().to_string())
+                    .unwrap_or_else(|_| key.clone());
+                BibleError::BookNotFound {
+                    book_abbrev: key.clone(),
+                    book_name,
+                    translation: self.name.clone(),
+                }
             })
     }
 
