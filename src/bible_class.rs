@@ -252,8 +252,9 @@ impl Bible {
     ///
     /// An optional reference to the book if found, None otherwise.
     pub fn get_book_by_abbrev(&self, abbrev: &str) -> Option<&Book> {
+        let key = abbrev.to_ascii_lowercase();
         self.index_by_abbrev
-            .get(abbrev)
+            .get(key.as_str())
             .and_then(|&i| self.books.get(i))
     }
 
@@ -615,6 +616,11 @@ mod tests {
 
         // Test valid abbreviation
         let book = bible.get_book_by_abbrev("gn");
+        assert!(book.is_some());
+        assert_eq!(book.unwrap().title(), "Genesis");
+
+        // Test case-insensitive lookup
+        let book = bible.get_book_by_abbrev("GN");
         assert!(book.is_some());
         assert_eq!(book.unwrap().title(), "Genesis");
 
