@@ -52,8 +52,10 @@ fn test_bible_creation_with_real_data() {
     if let Some(verse) = bible.get_verse(BibleBook::Genesis, 1, 1) {
         // We can't access private fields, but we can test the Display trait
         let verse_str = format!("{}", verse);
-        assert!(!verse_str.is_empty());
-        assert!(verse_str.contains("1:"));
+        assert_eq!(
+            verse_str,
+            "1: In the beginning God created the heaven and the earth."
+        );
     }
 
     // Test that we can get a book
