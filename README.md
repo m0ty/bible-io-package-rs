@@ -41,6 +41,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+## JSON Structure
+
+The library expects Bible data in the following JSON format:
+
+```json
+{
+    "id": "en-kjv",
+    "name": "King James Version",
+    "description": "King James Version of the Holy Bible",
+    "language": "English",
+    "books": {
+        "gn": {
+            "name": "Genesis",
+            "chapters": [
+                [
+                    "In the beginning God created the heaven and the earth.",
+                    "And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.",
+                    "And God said, Let there be light: and there was light."
+                ]
+            ]
+        }
+    }
+}
+```
+
+Top-level fields identify the translation. Each entry in `books` uses a book abbreviation (e.g., `"gn"`) and contains a `name` and a `chapters` array, where each chapter is a list of verse strings.
+
 ## Examples
 
 Run the included example:
