@@ -47,31 +47,6 @@ Run the included example:
 cargo run --example basic_usage
 ```
 
-## Project Structure
-
-```
-rust_bible_struct/
-├── src/                    # Source code
-├── tests/                  # Integration tests
-│   ├── fixtures/          # Test data files (recommended location for en_kjv.json)
-│   ├── common.rs          # Shared test utilities
-│   └── integration_tests.rs # Main test suite
-├── examples/               # Usage examples
-└── en_kjv.json            # Bible data file (can be moved to tests/fixtures/)
-```
-
-## Test Data Organization
-
-The library includes integration tests that require Bible data. For best practices:
-
-- **Recommended**: Place `en_kjv.json` in `tests/fixtures/` directory
-- **Alternative**: Place `en_kjv.json` directly in `tests/` directory
-- **Fallback**: Place `en_kjv.json` in project root
-
-Use the provided scripts to automatically move your data file:
-- **Windows**: `.\move_en_kjv_json.ps1`
-- **Linux/macOS**: `./move_en_kjv_json.sh`
-
 ## Running Tests
 
 ```bash
