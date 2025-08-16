@@ -1,11 +1,12 @@
 use std::collections::HashMap;
+use std::error::Error;
 use std::fmt;
 use std::fs;
 use std::str::FromStr;
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use simd_json::serde::from_str as simd_from_str;
+use simd_json::serde::from_slice as simd_from_slice;
 
 use crate::bible_books_enum::BibleBook;
 
@@ -444,27 +445,22 @@ impl Bible {
     ///
     /// * `json_path` - The path to the JSON file containing Bible data
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// This function will panic if the file cannot be read or if the JSON
-    /// cannot be parsed. The JSON should have the structure where each book
-    /// is a key with an object containing "name" and "chapters" fields.
-    pub fn new_from_json(json_path: &str) -> Self {
-        let mut file_content = fs::read_to_string(json_path)
-            .expect("Failed to read the file. Make sure the path is correct.");
+    /// Returns an error if the file cannot be read or if the JSON cannot be
+    /// parsed. The JSON should have the structure where each book is a key
+    /// with an object containing "name" and "chapters" fields.
+    pub fn new_from_json(json_path: &str) -> Result<Self, Box<dyn Error>> {
+        let mut file_content = fs::read(json_path)?;
+        let root: BibleFileRoot = simd_from_slice(&mut file_content)?;
 
-        let root: BibleFileRoot = unsafe {
-            simd_from_str(&mut file_content)
-                .expect("Failed to parse JSON with simd-json. Check structure & CPU features.")
-        };
-
-        Bible::new_from_map_with_meta(
+        Ok(Bible::new_from_map_with_meta(
             root.books,
             root.id,
             root.name,
             root.description,
             root.language,
-        )
+        ))
     }
 }
 
@@ -475,7 +471,7 @@ mod tests {
 
     #[test]
     fn test_bible_parse_new_wrapped_format() {
-        let mut json = String::from(
+        let json = String::from(
             r#"
         {
             "id": "en-kjv",
@@ -495,7 +491,8 @@ mod tests {
         "#,
         );
 
-        let root: BibleFileRoot = unsafe { simd_from_str(&mut json).unwrap() };
+        let mut bytes = json.into_bytes();
+        let root: BibleFileRoot = simd_from_slice(&mut bytes).unwrap();
 
         // Build Bible with metadata populated
         let bible = Bible::new_from_map_with_meta(

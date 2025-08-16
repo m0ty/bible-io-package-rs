@@ -46,7 +46,7 @@ fn test_bible_creation_with_real_data() {
 
     println!("Using en_kjv.json at: {}", file_path);
 
-    let bible = Bible::new_from_json(&file_path);
+    let bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
 
     // Test that we can get a verse from Genesis
     if let Ok(verse) = bible.get_verse(BibleBook::Genesis, 1, 1) {
