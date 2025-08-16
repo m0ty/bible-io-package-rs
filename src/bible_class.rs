@@ -150,12 +150,12 @@ impl Chapter {
         }
     }
 
-    /// Returns a reference to all verses in this chapter.
+    /// Returns a slice of all verses in this chapter.
     ///
     /// # Returns
     ///
-    /// A reference to the vector of verses in this chapter.
-    pub fn get_verses(&self) -> &Vec<Verse> {
+    /// A slice containing the verses in this chapter.
+    pub fn get_verses(&self) -> &[Verse] {
         &self.verses
     }
 
@@ -169,7 +169,10 @@ impl Chapter {
     ///
     /// An optional reference to the verse if found, None otherwise.
     pub fn get_verse(&self, verse_number: usize) -> Option<&Verse> {
-        self.verses.iter().find(|v| v.verse_number == verse_number)
+        if verse_number == 0 {
+            return None;
+        }
+        self.verses.get(verse_number - 1)
     }
 }
 
@@ -231,9 +234,16 @@ impl Book {
     ///
     /// The requested chapter or a descriptive error if the chapter number is invalid.
     pub fn get_chapter(&self, chapter_number: usize) -> Result<&Chapter, BibleError> {
+        if chapter_number == 0 {
+            return Err(BibleError::ChapterOutOfBounds {
+                book_abbrev: self.abbrev.clone(),
+                book_name: self.title.clone(),
+                chapter: chapter_number,
+                max_chapter: self.chapters.len(),
+            });
+        }
         self.chapters
-            .iter()
-            .find(|c| c.chapter_number == chapter_number)
+            .get(chapter_number - 1)
             .ok_or_else(|| BibleError::ChapterOutOfBounds {
                 book_abbrev: self.abbrev.clone(),
                 book_name: self.title.clone(),
@@ -251,7 +261,7 @@ impl Book {
     /// # Returns
     ///
     /// The verses from the requested chapter or a descriptive error.
-    pub fn get_verses(&self, chapter_number: usize) -> Result<&Vec<Verse>, BibleError> {
+    pub fn get_verses(&self, chapter_number: usize) -> Result<&[Verse], BibleError> {
         self.get_chapter(chapter_number).map(|c| c.get_verses())
     }
 
@@ -373,7 +383,7 @@ impl Bible {
         &self,
         book: BibleBook,
         chapter_number: usize,
-    ) -> Result<&Vec<Verse>, BibleError> {
+    ) -> Result<&[Verse], BibleError> {
         self.get_book(book)?.get_verses(chapter_number)
     }
 
