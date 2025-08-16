@@ -1,3 +1,4 @@
+use std::fmt;
 use std::str::FromStr;
 
 /// Represents Bible books across Protestant (66), Catholic (Deuterocanon), and
@@ -293,6 +294,14 @@ impl core::fmt::Display for BibleBook {
 /// Error returned when parsing an unknown/unsupported abbreviation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseBibleBookError;
+
+impl fmt::Display for ParseBibleBookError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("invalid Bible book abbreviation")
+    }
+}
+
+impl std::error::Error for ParseBibleBookError {}
 
 impl FromStr for BibleBook {
     type Err = ParseBibleBookError;
