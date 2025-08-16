@@ -3,7 +3,10 @@ use rust_bible_struct::{Bible, BibleBook};
 mod common;
 use common::test_utils;
 
-const VERSE_CASES: &[(BibleBook, (usize, usize, &str), (usize, usize, &str))] = &[
+type VerseSpec = (usize, usize, &'static str);
+type VerseCase = (BibleBook, VerseSpec, VerseSpec);
+
+const VERSE_CASES: &[VerseCase] = &[
     (BibleBook::Genesis, (1, 1, "In the beginning God created the heaven and the earth."), (50, 26, "So Joseph died, being an hundred and ten years old: and they embalmed him, and he was put in a coffin in Egypt.")),
     (BibleBook::Exodus, (1, 1, "Now these are the names of the children of Israel, which came into Egypt; every man and his household came with Jacob."), (40, 38, "For the cloud of the LORD was upon the tabernacle by day, and fire was on it by night, in the sight of all the house of Israel, throughout all their journeys.")),
     (BibleBook::Leviticus, (1, 1, "And the LORD called unto Moses, and spake unto him out of the tabernacle of the congregation, saying,"), (27, 34, "These are the commandments, which the LORD commanded Moses for the children of Israel in mount Sinai.")),
@@ -87,12 +90,12 @@ fn test_first_and_last_verses_of_each_book() {
     for (book, (f_ch, f_vs, f_text), (l_ch, l_vs, l_text)) in VERSE_CASES {
         let verse = bible
             .get_verse(*book, *f_ch, *f_vs)
-            .expect(&format!("Missing first verse for {:?}", book));
+            .unwrap_or_else(|_| panic!("Missing first verse for {:?}", book));
         assert_eq!(format!("{}: {}", f_vs, f_text), format!("{}", verse));
 
         let verse = bible
             .get_verse(*book, *l_ch, *l_vs)
-            .expect(&format!("Missing last verse for {:?}", book));
+            .unwrap_or_else(|_| panic!("Missing last verse for {:?}", book));
         assert_eq!(format!("{}: {}", l_vs, l_text), format!("{}", verse));
     }
 }
