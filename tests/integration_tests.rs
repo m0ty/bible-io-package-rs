@@ -36,10 +36,7 @@ fn test_bible_creation_with_real_data() {
         None => {
             // Skip the test if the file doesn't exist
             println!("Skipping test_bible_creation_with_real_data: en_kjv.json not found");
-            println!("To run this test, place en_kjv.json in one of these locations:");
-            println!("  1. tests/fixtures/ (recommended)");
-            println!("  2. tests/ directory");
-            println!("  3. Project root directory");
+            println!("To run this test, place en_kjv.json in tests/fixtures/");
             return;
         }
     };

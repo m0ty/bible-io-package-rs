@@ -5,7 +5,7 @@ edition = "2021"
 description = "A Rust library for working with Bible text data structures"
 authors = ["Moty Fainer"]
 license = "MIT"
-repository = "https://github.com/yourusername/rust_bible_struct"
+repository = "https://github.com/m0ty/bible-json-package-rs"
 keywords = ["bible", "scripture", "text-processing"]
 categories = ["text-processing", "parsing"]
 
