@@ -1,5 +1,7 @@
 use rust_bible_struct::BibleBook;
 
+// Tests for `BibleBook::full_name()`
+
 #[test]
 fn full_name_representative_books() {
     assert_eq!(BibleBook::Genesis.full_name(), "Genesis");
