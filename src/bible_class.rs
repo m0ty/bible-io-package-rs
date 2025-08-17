@@ -150,6 +150,11 @@ impl Chapter {
         }
     }
 
+    /// Returns this chapter's number within its book.
+    pub fn number(&self) -> usize {
+        self.chapter_number
+    }
+
     /// Returns a slice of all verses in this chapter.
     ///
     /// # Returns
@@ -222,6 +227,11 @@ impl Book {
     /// Returns the book's full title.
     pub fn title(&self) -> &str {
         &self.title
+    }
+
+    /// Returns a slice of all chapters in this book.
+    pub fn chapters(&self) -> &[Chapter] {
+        &self.chapters
     }
 
     /// Returns a specific chapter by its chapter number.
@@ -328,6 +338,11 @@ impl Bible {
 
     pub fn language(&self) -> &str {
         &self.language
+    }
+
+    /// Returns a slice of all books in this Bible.
+    pub fn books(&self) -> &[Book] {
+        &self.books
     }
 
     /// Returns a book by its BibleBook enum value.
