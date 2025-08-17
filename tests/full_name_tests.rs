@@ -6,7 +6,10 @@ fn full_name_representative_books() {
     assert_eq!(BibleBook::Psalms.full_name(), "Psalms");
     assert_eq!(BibleBook::Revelation.full_name(), "Revelation");
     assert_eq!(BibleBook::Tobit.full_name(), "Tobit");
-    assert_eq!(BibleBook::DanielBelAndTheDragon.full_name(), "Daniel (Bel and the Dragon)");
+    assert_eq!(
+        BibleBook::DanielBelAndTheDragon.full_name(),
+        "Daniel (Bel and the Dragon)"
+    );
     assert_eq!(BibleBook::FourthMaccabees.full_name(), "4 Maccabees");
 }
 
@@ -105,4 +108,3 @@ fn full_name_all_books() {
         assert_eq!(book.full_name(), *expected);
     }
 }
-
