@@ -223,7 +223,7 @@ impl Book {
     /// * `chapters` - A vector of chapters in this book
     pub fn new(abbrev: String, title: String, chapters: Vec<Chapter>) -> Self {
         Book {
-            abbrev,
+            abbrev: abbrev.to_ascii_lowercase(),
             title,
             chapters,
         }
@@ -463,7 +463,7 @@ impl Bible {
         // Build abbrev index
         let mut index_by_abbrev = HashMap::with_capacity(books.len());
         for (i, b) in books.iter().enumerate() {
-            index_by_abbrev.insert(b.abbrev.clone(), i);
+            index_by_abbrev.insert(b.abbrev.to_ascii_lowercase(), i);
         }
 
         Bible {
@@ -583,7 +583,7 @@ mod tests {
                 2,
             ),
         ];
-        Book::new("gn".to_string(), "Genesis".to_string(), chapters)
+        Book::new("GN".to_string(), "Genesis".to_string(), chapters)
     }
 
     fn create_test_bible() -> Bible {
@@ -805,7 +805,7 @@ mod tests {
 
         let mut map = IndexMap::new();
         map.insert(
-            "gn".to_string(),
+            "GN".to_string(),
             FileDataEntry {
                 name: "Genesis".to_string(),
                 chapters: vec![
@@ -836,6 +836,9 @@ mod tests {
         assert_eq!(bible.books[0].chapters.len(), 2);
         assert_eq!(bible.books[0].chapters[0].verses.len(), 2);
         assert_eq!(bible.books[0].chapters[1].verses.len(), 1);
+        assert!(bible.index_by_abbrev.contains_key("gn"));
+        // Ensure case-insensitive lookup works for uppercase input
+        assert!(bible.get_book_by_abbrev("GN").is_ok());
     }
 
     #[test]
