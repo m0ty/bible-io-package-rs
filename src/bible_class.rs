@@ -119,6 +119,16 @@ impl Verse {
             verse_number,
         }
     }
+
+    /// Returns the text content of the verse.
+    pub fn text(&self) -> &str {
+        &self.verse_text
+    }
+
+    /// Returns the verse number within its chapter.
+    pub fn number(&self) -> usize {
+        self.verse_number
+    }
 }
 
 impl fmt::Display for Verse {
