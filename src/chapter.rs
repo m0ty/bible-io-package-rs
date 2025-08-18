@@ -5,7 +5,7 @@ use crate::verse::Verse;
 /// Represents a chapter from a Bible book.
 ///
 /// A chapter contains multiple verses and has a chapter number.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Chapter {
     verses: Vec<Verse>,
     chapter_number: usize,
@@ -80,5 +80,26 @@ mod tests {
         assert_eq!(chapter.get_verses().len(), 1);
         assert_eq!(chapter.get_verse(1).unwrap().number(), 1);
         assert!(chapter.get_verse(0).is_none());
+    }
+
+    #[test]
+    fn test_clone_independence() {
+        let verses = vec![Verse::new("Clone".into(), 1)];
+        let original = Chapter::new(verses, 1);
+        let cloned = original.clone();
+
+        assert_eq!(original.number(), cloned.number());
+        assert_eq!(original.get_verses().len(), cloned.get_verses().len());
+        assert_eq!(
+            original.get_verses()[0].text(),
+            cloned.get_verses()[0].text()
+        );
+
+        // Ensure the cloned chapter owns its data
+        assert_ne!(original.get_verses().as_ptr(), cloned.get_verses().as_ptr());
+        assert_ne!(
+            original.get_verses()[0].text().as_ptr(),
+            cloned.get_verses()[0].text().as_ptr()
+        );
     }
 }

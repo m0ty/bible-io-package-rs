@@ -3,7 +3,7 @@ use std::fmt;
 /// Represents a single verse from the Bible.
 ///
 /// A verse contains the text content and its verse number within a chapter.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Verse {
     verse_text: String,
     verse_number: usize,
@@ -50,5 +50,17 @@ mod tests {
         assert_eq!(verse.text(), "Test");
         assert_eq!(verse.number(), 1);
         assert_eq!(format!("{}", verse), "1: Test");
+    }
+
+    #[test]
+    fn test_clone_independence() {
+        let original = Verse::new("Clone me".to_string(), 42);
+        let cloned = original.clone();
+
+        assert_eq!(original.text(), cloned.text());
+        assert_eq!(original.number(), cloned.number());
+
+        // Ensure the cloned verse has its own allocation
+        assert_ne!(original.text().as_ptr(), cloned.text().as_ptr());
     }
 }

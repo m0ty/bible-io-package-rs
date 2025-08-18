@@ -96,7 +96,7 @@ struct FileDataEntry {
 /// Represents the complete Bible with all books, chapters, and verses.
 ///
 /// The Bible struct provides efficient access to any verse, chapter, or book
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Bible {
     books: Vec<Book>,
     index_by_abbrev: HashMap<String, usize>,
@@ -462,10 +462,10 @@ mod tests {
         Bible {
             books: vec![book],
             index_by_abbrev,
-            id: String::new(),
-            name: String::new(),
-            description: String::new(),
-            language: String::new(),
+            id: "id".to_string(),
+            name: "name".to_string(),
+            description: "desc".to_string(),
+            language: "lang".to_string(),
         }
     }
 
@@ -476,5 +476,22 @@ mod tests {
         assert_eq!(book.title(), "Genesis");
         let verse = bible.get_verse(BibleBook::Genesis, 1, 1).unwrap();
         assert_eq!(verse.number(), 1);
+    }
+
+    #[test]
+    fn test_clone_independence() {
+        let original = create_test_bible();
+        let cloned = original.clone();
+
+        assert_eq!(original.id(), cloned.id());
+        assert_eq!(original.name(), cloned.name());
+        assert_eq!(original.description(), cloned.description());
+        assert_eq!(original.language(), cloned.language());
+        assert_eq!(original.books().len(), cloned.books().len());
+        assert_eq!(original.books()[0].title(), cloned.books()[0].title());
+
+        // Ensure cloned Bible owns its data
+        assert_ne!(original.books().as_ptr(), cloned.books().as_ptr());
+        assert_ne!(original.name().as_ptr(), cloned.name().as_ptr());
     }
 }
