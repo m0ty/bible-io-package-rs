@@ -171,6 +171,212 @@ impl Bible {
         self.get_book(book)?.get_verse(chapter_number, verse_number)
     }
 
+    /// Returns a specific verse using a human-readable reference string.
+    ///
+    /// The reference should be in the form "Book Chapter:Verse", for example
+    /// `"Genesis 1:1"` or `"Jn 3:16"`. Common book abbreviations are
+    /// supported.
+    pub fn get_verse_by_reference(&self, reference: &str) -> Result<&Verse, BibleError> {
+        let reference = reference.trim();
+
+        // Split verse part
+        let (book_and_chapter, verse_str) = reference
+            .rsplit_once(':')
+            .ok_or_else(|| self.parse_error(reference))?;
+        let verse_number: usize = verse_str
+            .trim()
+            .parse()
+            .map_err(|_| self.parse_error(reference))?;
+
+        // Split chapter part
+        let (book_str, chapter_str) = book_and_chapter
+            .rsplit_once(' ')
+            .ok_or_else(|| self.parse_error(book_and_chapter))?;
+        let chapter_number: usize = chapter_str
+            .trim()
+            .parse()
+            .map_err(|_| self.parse_error(book_and_chapter))?;
+
+        // Resolve the book reference
+        let book = self
+            .resolve_book(book_str.trim())
+            .ok_or_else(|| self.parse_error(book_str))?;
+
+        self.get_verse(book, chapter_number, verse_number)
+    }
+
+    fn parse_error(&self, part: &str) -> BibleError {
+        BibleError::BookNotFound {
+            book_abbrev: part.to_ascii_lowercase(),
+            book_name: part.to_string(),
+            translation: self.name.clone(),
+        }
+    }
+
+    fn resolve_book(&self, input: &str) -> Option<BibleBook> {
+        let lower = input.to_ascii_lowercase();
+
+        const ALT_ABBREVS: &[(&str, BibleBook)] = &[
+            // --- Protestant (66) ---
+            ("gen", BibleBook::Genesis),
+            ("ge", BibleBook::Genesis),
+            ("exo", BibleBook::Exodus),
+            ("exod", BibleBook::Exodus),
+            ("lev", BibleBook::Leviticus),
+            ("le", BibleBook::Leviticus),
+            ("num", BibleBook::Numbers),
+            ("nu", BibleBook::Numbers),
+            ("deut", BibleBook::Deuteronomy),
+            ("deu", BibleBook::Deuteronomy),
+            ("jos", BibleBook::Joshua),
+            ("josh", BibleBook::Joshua),
+            ("jdg", BibleBook::Judges),
+            ("judg", BibleBook::Judges),
+            ("rut", BibleBook::Ruth),
+            ("ru", BibleBook::Ruth),
+            ("1sa", BibleBook::FirstSamuel),
+            ("1sam", BibleBook::FirstSamuel),
+            ("2sa", BibleBook::SecondSamuel),
+            ("2sam", BibleBook::SecondSamuel),
+            ("1ki", BibleBook::FirstKings),
+            ("1kings", BibleBook::FirstKings),
+            ("2ki", BibleBook::SecondKings),
+            ("2kings", BibleBook::SecondKings),
+            ("1ch", BibleBook::FirstChronicles),
+            ("1chr", BibleBook::FirstChronicles),
+            ("2ch", BibleBook::SecondChronicles),
+            ("2chr", BibleBook::SecondChronicles),
+            ("ezr", BibleBook::Ezra),
+            ("ezra", BibleBook::Ezra),
+            ("neh", BibleBook::Nehemiah),
+            ("ne", BibleBook::Nehemiah),
+            ("est", BibleBook::Esther),
+            ("esth", BibleBook::Esther),
+            ("job", BibleBook::Job),
+            ("jb", BibleBook::Job),
+            ("psa", BibleBook::Psalms),
+            ("psalm", BibleBook::Psalms),
+            ("psalms", BibleBook::Psalms),
+            ("pro", BibleBook::Proverbs),
+            ("prov", BibleBook::Proverbs),
+            ("ecc", BibleBook::Ecclesiastes),
+            ("eccl", BibleBook::Ecclesiastes),
+            ("sos", BibleBook::SongOfSolomon),
+            ("song", BibleBook::SongOfSolomon),
+            ("songofsongs", BibleBook::SongOfSolomon),
+            ("isa", BibleBook::Isaiah),
+            ("jer", BibleBook::Jeremiah),
+            ("lam", BibleBook::Lamentations),
+            ("ezek", BibleBook::Ezekiel),
+            ("eze", BibleBook::Ezekiel),
+            ("dan", BibleBook::Daniel),
+            ("da", BibleBook::Daniel),
+            ("hos", BibleBook::Hosea),
+            ("joe", BibleBook::Joel),
+            ("amo", BibleBook::Amos),
+            ("oba", BibleBook::Obadiah),
+            ("obad", BibleBook::Obadiah),
+            ("jon", BibleBook::Jonah),
+            ("jnh", BibleBook::Jonah),
+            ("mic", BibleBook::Micah),
+            ("nah", BibleBook::Nahum),
+            ("hab", BibleBook::Habakkuk),
+            ("zep", BibleBook::Zephaniah),
+            ("zeph", BibleBook::Zephaniah),
+            ("hag", BibleBook::Haggai),
+            ("zec", BibleBook::Zechariah),
+            ("zech", BibleBook::Zechariah),
+            ("mal", BibleBook::Malachi),
+            ("mat", BibleBook::Matthew),
+            ("matt", BibleBook::Matthew),
+            ("mar", BibleBook::Mark),
+            ("mrk", BibleBook::Mark),
+            ("luk", BibleBook::Luke),
+            ("luke", BibleBook::Luke),
+            ("john", BibleBook::John),
+            ("jhn", BibleBook::John),
+            ("jn", BibleBook::John),
+            ("acts", BibleBook::Acts),
+            ("ac", BibleBook::Acts),
+            ("rom", BibleBook::Romans),
+            ("1co", BibleBook::FirstCorinthians),
+            ("1cor", BibleBook::FirstCorinthians),
+            ("2co", BibleBook::SecondCorinthians),
+            ("2cor", BibleBook::SecondCorinthians),
+            ("gal", BibleBook::Galatians),
+            ("eph", BibleBook::Ephesians),
+            ("phil", BibleBook::Philippians),
+            ("php", BibleBook::Philippians),
+            ("col", BibleBook::Colossians),
+            ("1th", BibleBook::FirstThessalonians),
+            ("1thes", BibleBook::FirstThessalonians),
+            ("2th", BibleBook::SecondThessalonians),
+            ("2thes", BibleBook::SecondThessalonians),
+            ("1ti", BibleBook::FirstTimothy),
+            ("1tim", BibleBook::FirstTimothy),
+            ("2ti", BibleBook::SecondTimothy),
+            ("2tim", BibleBook::SecondTimothy),
+            ("tit", BibleBook::Titus),
+            ("phm", BibleBook::Philemon),
+            ("phlm", BibleBook::Philemon),
+            ("philemon", BibleBook::Philemon),
+            ("heb", BibleBook::Hebrews),
+            ("jas", BibleBook::James),
+            ("jam", BibleBook::James),
+            ("1pe", BibleBook::FirstPeter),
+            ("1pet", BibleBook::FirstPeter),
+            ("2pe", BibleBook::SecondPeter),
+            ("2pet", BibleBook::SecondPeter),
+            ("1jn", BibleBook::FirstJohn),
+            ("1joh", BibleBook::FirstJohn),
+            ("2jn", BibleBook::SecondJohn),
+            ("2joh", BibleBook::SecondJohn),
+            ("3jn", BibleBook::ThirdJohn),
+            ("3joh", BibleBook::ThirdJohn),
+            ("jud", BibleBook::Jude),
+            ("jude", BibleBook::Jude),
+            ("rev", BibleBook::Revelation),
+            ("revelation", BibleBook::Revelation),
+            // --- Catholic Deuterocanon ---
+            ("tob", BibleBook::Tobit),
+            ("jdt", BibleBook::Judith),
+            ("wis", BibleBook::Wisdom),
+            ("sir", BibleBook::Sirach),
+            ("bar", BibleBook::Baruch),
+            ("1mac", BibleBook::FirstMaccabees),
+            ("2mac", BibleBook::SecondMaccabees),
+            ("estg", BibleBook::EstherAdditions),
+            ("addesth", BibleBook::EstherAdditions),
+            ("dan3", BibleBook::DanielSongOfThree),
+            ("sus", BibleBook::DanielSusanna),
+            ("bel", BibleBook::DanielBelAndTheDragon),
+            // --- Eastern Orthodox Additions ---
+            ("1esd", BibleBook::FirstEsdras),
+            ("2esd", BibleBook::SecondEsdras),
+            ("man", BibleBook::PrayerOfManasseh),
+            ("prman", BibleBook::PrayerOfManasseh),
+            ("ps151", BibleBook::Psalm151),
+            ("3mac", BibleBook::ThirdMaccabees),
+            ("4mac", BibleBook::FourthMaccabees),
+        ];
+
+        ALT_ABBREVS
+            .iter()
+            .find(|(abbr, _)| *abbr == lower)
+            .map(|(_, book)| *book)
+            .or_else(|| {
+                // Try official abbreviations
+                BibleBook::from_str(&lower).ok()
+            })
+            .or_else(|| {
+                // Try full book titles from loaded data
+                self.books
+                    .iter()
+                    .find(|b| b.title().eq_ignore_ascii_case(input))
+                    .and_then(|b| BibleBook::from_str(&b.abbrev().to_ascii_lowercase()).ok())
+            })
+    }
+
     fn new_from_map_with_meta(
         map: IndexMap<String, FileDataEntry>,
         id: String,
