@@ -3,9 +3,15 @@
 //! This library provides structures and functionality for parsing and working with Bible text data,
 //! including books, chapters, and verses.
 
+pub mod bible;
 pub mod bible_books_enum;
-pub mod bible_class;
+pub mod book;
+pub mod chapter;
+pub mod verse;
 
 // Re-export main types for easier access
+pub use bible::{Bible, BibleError};
 pub use bible_books_enum::BibleBook;
-pub use bible_class::{Bible, BibleError, Book, Chapter, Verse};
+pub use book::Book;
+pub use chapter::Chapter;
+pub use verse::Verse;
