@@ -205,6 +205,35 @@ impl Bible {
         self.get_verse(book, chapter_number, verse_number)
     }
 
+    /// Searches all verses for a case-insensitive substring match.
+    ///
+    /// This performs a naive linear scan through every verse in the Bible.
+    /// It converts each verse to lowercase on the fly and therefore has
+    /// `O(n)` complexity over the total number of verses. For large texts or
+    /// repeated searches, consider building an index instead.
+    pub fn search(&self, query: &str) -> Vec<(BibleBook, usize, usize)> {
+        if query.is_empty() {
+            return Vec::new();
+        }
+
+        let needle = query.to_ascii_lowercase();
+        let mut results = Vec::new();
+
+        for book in &self.books {
+            if let Ok(book_enum) = BibleBook::from_str(book.abbrev()) {
+                for (chapter_idx, chapter) in book.chapters().iter().enumerate() {
+                    for verse in chapter.get_verses() {
+                        if verse.text().to_ascii_lowercase().contains(&needle) {
+                            results.push((book_enum, chapter_idx + 1, verse.number()));
+                        }
+                    }
+                }
+            }
+        }
+
+        results
+    }
+
     fn parse_error(&self, part: &str) -> BibleError {
         BibleError::BookNotFound {
             book_abbrev: part.to_ascii_lowercase(),
