@@ -5,7 +5,7 @@ use crate::{bible::BibleError, chapter::Chapter, verse::Verse};
 /// Represents a book of the Bible.
 ///
 /// A book contains multiple chapters and has an abbreviation and title.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Book {
     abbrev: String, // keep the JSON key, no assumptions about canon
     title: String,
@@ -135,5 +135,19 @@ mod tests {
         assert_eq!(book.title(), "Genesis");
         assert!(book.get_chapter(1).is_ok());
         assert!(book.get_chapter(0).is_err());
+    }
+
+    #[test]
+    fn test_clone_independence() {
+        let book = Book::new("GN".into(), "Genesis".into(), vec![create_test_chapter()]);
+        let cloned = book.clone();
+
+        assert_eq!(book.abbrev(), cloned.abbrev());
+        assert_eq!(book.title(), cloned.title());
+        assert_eq!(book.chapters().len(), cloned.chapters().len());
+
+        // Ensure cloned book owns its data
+        assert_ne!(book.title().as_ptr(), cloned.title().as_ptr());
+        assert_ne!(book.chapters().as_ptr(), cloned.chapters().as_ptr());
     }
 }
