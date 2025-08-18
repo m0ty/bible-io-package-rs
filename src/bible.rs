@@ -171,6 +171,42 @@ impl Bible {
         self.get_book(book)?.get_verse(chapter_number, verse_number)
     }
 
+    /// Searches all verses for the given query and returns matching references.
+    ///
+    /// The search is a simple case-insensitive substring match performed by
+    /// scanning every verse in the loaded Bible. This means the operation is
+    /// linear in the total number of verses and can be slow for large
+    /// translations or repeated queries. For more advanced use cases, consider
+    /// building an external search index.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - The text to look for within verses.
+    ///
+    /// # Returns
+    ///
+    /// A vector of tuples `(BibleBook, chapter, verse)` indicating where each
+    /// match was found.
+    pub fn search(&self, query: &str) -> Vec<(BibleBook, usize, usize)> {
+        let query = query.to_ascii_lowercase();
+        let mut results = Vec::new();
+
+        for book in &self.books {
+            let Ok(book_enum) = BibleBook::from_str(book.abbrev()) else {
+                continue;
+            };
+            for chapter in book.chapters() {
+                for verse in chapter.get_verses() {
+                    if verse.text().to_ascii_lowercase().contains(&query) {
+                        results.push((book_enum, chapter.number(), verse.number()));
+                    }
+                }
+            }
+        }
+
+        results
+    }
+
     fn new_from_map_with_meta(
         map: IndexMap<String, FileDataEntry>,
         id: String,
@@ -247,14 +283,25 @@ mod tests {
     use std::collections::HashMap;
 
     fn create_test_bible() -> Bible {
-        let verse = Verse::new("In the beginning".to_string(), 1);
-        let chapter = Chapter::new(vec![verse], 1);
-        let book = Book::new("GN".to_string(), "Genesis".to_string(), vec![chapter]);
+        // Genesis with two verses containing the word "world" in different cases
+        let verses_gn = vec![
+            Verse::new("Hello World".to_string(), 1),
+            Verse::new("world Peace".to_string(), 2),
+        ];
+        let chapter_gn = Chapter::new(verses_gn, 1);
+        let book_gn = Book::new("GN".to_string(), "Genesis".to_string(), vec![chapter_gn]);
+
+        // Exodus with a single verse also containing "world"
+        let verses_ex = vec![Verse::new("Goodbye world".to_string(), 1)];
+        let chapter_ex = Chapter::new(verses_ex, 1);
+        let book_ex = Book::new("EX".to_string(), "Exodus".to_string(), vec![chapter_ex]);
+
         let mut index_by_abbrev = HashMap::new();
         index_by_abbrev.insert("gn".to_string(), 0);
+        index_by_abbrev.insert("ex".to_string(), 1);
 
         Bible {
-            books: vec![book],
+            books: vec![book_gn, book_ex],
             index_by_abbrev,
             id: String::new(),
             name: String::new(),
@@ -270,5 +317,26 @@ mod tests {
         assert_eq!(book.title(), "Genesis");
         let verse = bible.get_verse(BibleBook::Genesis, 1, 1).unwrap();
         assert_eq!(verse.number(), 1);
+    }
+
+    #[test]
+    fn test_search_case_insensitive() {
+        let bible = create_test_bible();
+        let results = bible.search("WORLD");
+        assert_eq!(
+            results,
+            vec![
+                (BibleBook::Genesis, 1, 1),
+                (BibleBook::Genesis, 1, 2),
+                (BibleBook::Exodus, 1, 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_search_no_match() {
+        let bible = create_test_bible();
+        let results = bible.search("planet");
+        assert!(results.is_empty());
     }
 }
