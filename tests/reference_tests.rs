@@ -1,4 +1,4 @@
-use rust_bible_struct::Bible;
+use rust_bible_struct::{Bible, BibleError};
 
 mod common;
 use common::test_utils;
@@ -61,7 +61,16 @@ fn test_get_verse_by_reference_invalid() {
     };
 
     let bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
-
-    assert!(bible.get_verse_by_reference("Unknown 1:1").is_err());
-    assert!(bible.get_verse_by_reference("Genesis 1").is_err());
+    assert!(matches!(
+        bible.get_verse_by_reference("Unknown 1:1"),
+        Err(BibleError::BookNotFound { .. })
+    ));
+    assert!(matches!(
+        bible.get_verse_by_reference("Genesis 1"),
+        Err(BibleError::InvalidReference { input }) if input == "Genesis 1"
+    ));
+    assert!(matches!(
+        bible.get_verse_by_reference("Jn3:16"),
+        Err(BibleError::InvalidReference { input }) if input == "Jn3:16"
+    ));
 }
