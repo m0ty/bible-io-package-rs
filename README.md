@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rust_bible_struct = "1.0.0"
+bible-io = "1.0.0"
 ```
 
 Basic usage:
