@@ -1,4 +1,4 @@
-# Rust Bible Struct
+# Bible-IO
 
 A Rust library for working with Bible text data structures, providing efficient parsing and access to Bible books, chapters, and verses.
 
@@ -6,7 +6,6 @@ A Rust library for working with Bible text data structures, providing efficient 
 
 - Parse Bible data from JSON files
 - Access books, chapters, and verses by various identifiers
-- Type-safe Bible book enumeration
 
 ## Usage
 
@@ -14,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rust_bible_struct = "0.1.0"
+rust_bible_struct = "1.0.0"
 ```
 
 Basic usage:

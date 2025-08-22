@@ -1,6 +1,6 @@
 [package]
-name = "rust_bible_struct"
-version = "0.1.0"
+name = "bible-io"
+version = "1.0.0"
 edition = "2021"
 description = "A Rust library for working with Bible text data structures"
 authors = ["Moty Fainer"]
