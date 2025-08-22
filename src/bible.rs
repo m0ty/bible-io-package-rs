@@ -30,6 +30,8 @@ pub enum BibleError {
         verse: usize,
         max_verse: usize,
     },
+    /// The provided reference string could not be parsed.
+    InvalidReference { input: String },
 }
 
 impl fmt::Display for BibleError {
@@ -70,6 +72,9 @@ impl fmt::Display for BibleError {
                     "Verse {} is out of bounds for book {} ('{}') chapter {} (max {})",
                     verse, book_name, book_abbrev, chapter, max_verse
                 )
+            }
+            BibleError::InvalidReference { input } => {
+                write!(f, "Invalid reference: '{}'", input)
             }
         }
     }
@@ -180,27 +185,43 @@ impl Bible {
         let reference = reference.trim();
 
         // Split verse part
-        let (book_and_chapter, verse_str) = reference
-            .rsplit_once(':')
-            .ok_or_else(|| self.parse_error(reference))?;
-        let verse_number: usize = verse_str
-            .trim()
-            .parse()
-            .map_err(|_| self.parse_error(reference))?;
+        let (book_and_chapter, verse_str) =
+            reference
+                .rsplit_once(':')
+                .ok_or_else(|| BibleError::InvalidReference {
+                    input: reference.to_string(),
+                })?;
+        let verse_number: usize =
+            verse_str
+                .trim()
+                .parse()
+                .map_err(|_| BibleError::InvalidReference {
+                    input: reference.to_string(),
+                })?;
 
         // Split chapter part
-        let (book_str, chapter_str) = book_and_chapter
-            .rsplit_once(' ')
-            .ok_or_else(|| self.parse_error(book_and_chapter))?;
-        let chapter_number: usize = chapter_str
-            .trim()
-            .parse()
-            .map_err(|_| self.parse_error(book_and_chapter))?;
+        let (book_str, chapter_str) =
+            book_and_chapter
+                .rsplit_once(' ')
+                .ok_or_else(|| BibleError::InvalidReference {
+                    input: reference.to_string(),
+                })?;
+        let chapter_number: usize =
+            chapter_str
+                .trim()
+                .parse()
+                .map_err(|_| BibleError::InvalidReference {
+                    input: reference.to_string(),
+                })?;
 
         // Resolve the book reference
         let book = self
             .resolve_book(book_str.trim())
-            .ok_or_else(|| self.parse_error(book_str))?;
+            .ok_or_else(|| BibleError::BookNotFound {
+                book_abbrev: book_str.trim().to_ascii_lowercase(),
+                book_name: book_str.trim().to_string(),
+                translation: self.name.clone(),
+            })?;
 
         self.get_verse(book, chapter_number, verse_number)
     }
@@ -232,14 +253,6 @@ impl Bible {
         }
 
         results
-    }
-
-    fn parse_error(&self, part: &str) -> BibleError {
-        BibleError::BookNotFound {
-            book_abbrev: part.to_ascii_lowercase(),
-            book_name: part.to_string(),
-            translation: self.name.clone(),
-        }
     }
 
     fn resolve_book(&self, input: &str) -> Option<BibleBook> {
