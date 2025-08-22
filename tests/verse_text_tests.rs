@@ -1,4 +1,4 @@
-use rust_bible_struct::{Bible, BibleBook};
+use bible_io::{Bible, BibleBook};
 
 mod common;
 use common::test_utils;

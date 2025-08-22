@@ -1,4 +1,4 @@
-use rust_bible_struct::{Bible, BibleBook};
+use bible_io::{Bible, BibleBook};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file_path = "tests/fixtures/en_kjv.json";

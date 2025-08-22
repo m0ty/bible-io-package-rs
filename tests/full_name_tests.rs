@@ -1,4 +1,4 @@
-use rust_bible_struct::BibleBook;
+use bible_io::BibleBook;
 
 // Tests for `BibleBook::full_name()`
 
@@ -17,7 +17,7 @@ fn full_name_representative_books() {
 
 #[test]
 fn full_name_all_books() {
-    use rust_bible_struct::BibleBook::*;
+    use bible_io::BibleBook::*;
 
     const EXPECTED: &[(BibleBook, &str)] = &[
         (Genesis, "Genesis"),

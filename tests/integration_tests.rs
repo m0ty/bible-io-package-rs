@@ -1,4 +1,4 @@
-use rust_bible_struct::{bible_books_enum::ParseBibleBookError, Bible, BibleBook};
+use bible_io::{bible_books_enum::ParseBibleBookError, Bible, BibleBook};
 use std::str::FromStr;
 
 mod common;
@@ -7,7 +7,7 @@ use common::test_utils;
 #[test]
 fn test_library_imports() {
     // Test that we can import all the main types
-    use rust_bible_struct::Verse;
+    use bible_io::Verse;
 
     // Create a simple verse to test the import
     let verse = Verse::new("Test verse".to_string(), 1);
