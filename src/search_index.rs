@@ -38,10 +38,7 @@ impl SearchIndex {
 
         for term in iter {
             if let Some(list) = self.index.get(&term) {
-                results = results
-                    .into_iter()
-                    .filter(|item| list.contains(item))
-                    .collect();
+                results.retain(|item| list.contains(item));
             } else {
                 return Vec::new();
             }

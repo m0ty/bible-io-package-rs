@@ -238,7 +238,7 @@ impl Bible {
                 for (chapter_idx, chapter) in book.chapters().iter().enumerate() {
                     for verse in chapter.get_verses() {
                         for term in SearchIndex::tokenize(verse.text()) {
-                            let entry = map.entry(term).or_insert_with(Vec::new);
+                            let entry = map.entry(term).or_default();
                             let tuple = (book_enum, chapter_idx + 1, verse.number());
                             if !entry.contains(&tuple) {
                                 entry.push(tuple);
