@@ -4,7 +4,10 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use simd_json::serde::from_slice as simd_from_slice;
 
-use crate::{bible_books_enum::BibleBook, book::Book, chapter::Chapter, verse::Verse};
+use crate::{
+    bible_books_enum::BibleBook, book::Book, chapter::Chapter, search_index::SearchIndex,
+    verse::Verse,
+};
 
 /// Errors that can occur when accessing Bible content.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -105,6 +108,9 @@ struct FileDataEntry {
 pub struct Bible {
     books: Vec<Book>,
     index_by_abbrev: HashMap<String, usize>,
+
+    /// Lazily constructed search index for verse lookups.
+    search_index: Option<SearchIndex>,
 
     id: String,
     name: String,
@@ -226,33 +232,49 @@ impl Bible {
         self.get_verse(book, chapter_number, verse_number)
     }
 
-    /// Searches all verses for a case-insensitive substring match.
+    /// Searches the Bible for verses containing all terms in the query.
     ///
-    /// This performs a naive linear scan through every verse in the Bible.
-    /// It converts each verse to lowercase on the fly and therefore has
-    /// `O(n)` complexity over the total number of verses. For large texts or
-    /// repeated searches, consider building an index instead.
-    pub fn search(&self, query: &str) -> Vec<(BibleBook, usize, usize)> {
+    /// A tokenized search index is built on first use and reused on subsequent
+    /// queries, providing fast lookups while keeping the public API unchanged.
+    pub fn search(&mut self, query: &str) -> Vec<(BibleBook, usize, usize)> {
         if query.is_empty() {
             return Vec::new();
         }
 
-        let needle = query.to_ascii_lowercase();
-        let mut results = Vec::new();
+        if self.search_index.is_none() {
+            let index = self.build_search_index();
+            self.search_index = Some(index);
+        }
+
+        // Safe to unwrap: ensured Some above
+        self.search_index.as_ref().unwrap().search(query)
+    }
+
+    /// Builds a search index for faster repeated searches.
+    pub fn build_search_index(&self) -> SearchIndex {
+        let mut map: HashMap<String, Vec<(BibleBook, usize, usize)>> = HashMap::new();
 
         for book in &self.books {
             if let Ok(book_enum) = BibleBook::from_str(book.abbrev()) {
                 for (chapter_idx, chapter) in book.chapters().iter().enumerate() {
                     for verse in chapter.get_verses() {
-                        if verse.text().to_ascii_lowercase().contains(&needle) {
-                            results.push((book_enum, chapter_idx + 1, verse.number()));
+                        for term in SearchIndex::tokenize(verse.text()) {
+                            let entry = map.entry(term).or_default();
+                            let tuple = (book_enum, chapter_idx + 1, verse.number());
+                            if !entry.contains(&tuple) {
+                                entry.push(tuple);
+                            }
                         }
                     }
                 }
             }
         }
 
-        results
+        for values in map.values_mut() {
+            values.sort_by_key(|&(b, c, v)| (b as usize, c, v));
+        }
+
+        SearchIndex::new(map)
     }
 
     fn resolve_book(&self, input: &str) -> Option<BibleBook> {
@@ -456,6 +478,7 @@ impl Bible {
         Bible {
             books,
             index_by_abbrev,
+            search_index: None,
             id,
             name,
             description,
@@ -504,6 +527,7 @@ mod tests {
         Bible {
             books: vec![book],
             index_by_abbrev,
+            search_index: None,
             id: "id".to_string(),
             name: "name".to_string(),
             description: "desc".to_string(),

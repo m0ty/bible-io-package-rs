@@ -13,10 +13,15 @@ fn search_finds_multiple_books() {
         }
     };
 
-    let bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
-    let results = bible.search("in the beginning");
-    assert!(results.contains(&(BibleBook::Genesis, 1, 1)));
-    assert!(results.contains(&(BibleBook::John, 1, 1)));
+    let mut bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
+    let index = bible.build_search_index();
+    let query = "in the beginning";
+    let search_results = bible.search(query);
+    assert!(search_results.contains(&(BibleBook::Genesis, 1, 1)));
+    assert!(search_results.contains(&(BibleBook::John, 1, 1)));
+
+    let indexed_results = index.search(query);
+    assert_eq!(search_results, indexed_results);
 }
 
 #[test]
@@ -29,7 +34,11 @@ fn search_is_case_insensitive() {
         }
     };
 
-    let bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
-    let results = bible.search("REJOICE EVERMORE");
-    assert_eq!(results, vec![(BibleBook::FirstThessalonians, 5, 16)]);
+    let mut bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
+    let index = bible.build_search_index();
+    let query = "REJOICE EVERMORE";
+    let search_results = bible.search(query);
+    let indexed_results = index.search(query);
+    assert_eq!(search_results, vec![(BibleBook::FirstThessalonians, 5, 16)]);
+    assert_eq!(search_results, indexed_results);
 }
