@@ -84,7 +84,7 @@ impl fmt::Display for BibleError {
     }
 }
 
-impl std::error::Error for BibleError {}
+impl Error for BibleError {}
 
 #[derive(Deserialize, Debug)]
 struct BibleFileRoot {

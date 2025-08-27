@@ -285,8 +285,8 @@ impl BibleBook {
     }
 }
 
-impl core::fmt::Display for BibleBook {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl fmt::Display for BibleBook {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
 }
