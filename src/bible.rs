@@ -1,9 +1,9 @@
-use std::{collections::HashMap, error::Error, fmt, fs, str::FromStr};
+use std::{collections::HashMap, fmt, fs, str::FromStr};
 
 use indexmap::IndexMap;
+use phf::phf_map;
 use serde::{Deserialize, Serialize};
 use simd_json::serde::from_slice as simd_from_slice;
-use phf::phf_map;
 
 use crate::{bible_books_enum::BibleBook, book::Book, chapter::Chapter, verse::Verse};
 
