@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, fs, str::FromStr};
+use std::{collections::HashMap, error::Error, fmt, fs, str::FromStr};
 
 use indexmap::IndexMap;
 use phf::phf_map;
