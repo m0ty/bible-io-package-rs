@@ -46,20 +46,25 @@ The library expects Bible data in the following JSON format:
 
 ```json
 {
-    "id": "en-kjv",
+    "id": "kjv",
     "name": "King James Version",
-    "description": "King James Version of the Holy Bible",
+    "description": "The King James Version (Oxford 1769) is a standardized revision of the classic 1611 English Bible.",
     "language": "English",
     "books": {
         "gn": {
             "name": "Genesis",
-            "chapters": [
-                [
-                    "In the beginning God created the heaven and the earth.",
-                    "And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.",
-                    "And God said, Let there be light: and there was light."
-                ]
-            ]
+            "chapters": {
+                "1": {
+                    "1": "In the beginning God created the heaven and the earth.",
+                    "2": "And the earth was without form, and void; and darkness {was} upon the face of the deep. And the Spirit of God moved upon the face of the waters.",
+                    "3": "And God said, Let there be light: and there was light."
+                },
+                "2": {
+                    "1": "Thus the heavens and the earth were finished, and all the host of them.",
+                    "2": "And on the seventh day God ended his work which he had made; and he rested on the seventh day from all his work which he had made.",
+                    "3": "And God blessed the seventh day, and sanctified it: because that in it he had rested from all his work which God created and made. "
+                }
+            }
         }
     }
 }
