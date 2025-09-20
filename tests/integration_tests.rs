@@ -59,6 +59,19 @@ fn test_bible_creation_with_real_data() {
     if let Ok(book) = bible.get_book(BibleBook::Genesis) {
         assert_eq!(book.abbrev(), "gn");
         assert_eq!(book.title(), "Genesis");
+
+        let chapters = book.chapters();
+        assert!(!chapters.is_empty());
+        assert_eq!(chapters[0].number(), 1);
+        if chapters.len() > 1 {
+            assert_eq!(chapters[1].number(), 2);
+        }
+
+        let verses = chapters[0].get_verses();
+        assert!(verses.len() >= 3);
+        assert_eq!(verses[0].number(), 1);
+        assert_eq!(verses[1].number(), 2);
+        assert_eq!(verses[2].number(), 3);
     }
 }
 

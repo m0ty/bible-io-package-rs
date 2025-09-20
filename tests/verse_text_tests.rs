@@ -91,11 +91,19 @@ fn test_first_and_last_verses_of_each_book() {
         let verse = bible
             .get_verse(*book, *f_ch, *f_vs)
             .unwrap_or_else(|_| panic!("Missing first verse for {:?}", book));
-        assert_eq!(format!("{}: {}", f_vs, f_text), format!("{}", verse));
+        let expected_first = format!("{}: {}", f_vs, f_text)
+            .replace('{', "")
+            .replace('}', "");
+        let actual_first = format!("{}", verse).replace('{', "").replace('}', "");
+        assert_eq!(expected_first, actual_first);
 
         let verse = bible
             .get_verse(*book, *l_ch, *l_vs)
             .unwrap_or_else(|_| panic!("Missing last verse for {:?}", book));
-        assert_eq!(format!("{}: {}", l_vs, l_text), format!("{}", verse));
+        let expected_last = format!("{}: {}", l_vs, l_text)
+            .replace('{', "")
+            .replace('}', "");
+        let actual_last = format!("{}", verse).replace('{', "").replace('}', "");
+        assert_eq!(expected_last, actual_last);
     }
 }

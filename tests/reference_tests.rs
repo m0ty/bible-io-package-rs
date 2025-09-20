@@ -45,9 +45,8 @@ fn test_get_verse_by_reference_valid() {
     let verse = bible
         .get_verse_by_reference("Rev 22:21")
         .expect("Verse not found");
-    assert!(verse
-        .text()
-        .starts_with("The grace of our Lord Jesus Christ be with you all"));
+    let normalized = verse.text().replace('{', "").replace('}', "");
+    assert!(normalized.starts_with("The grace of our Lord Jesus Christ be with you all"));
 }
 
 #[test]

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, fmt, fs, str::FromStr};
+use std::{cmp::Ordering, collections::HashMap, error::Error, fmt, fs, str::FromStr};
 
 use indexmap::IndexMap;
 use phf::phf_map;
@@ -98,7 +98,7 @@ struct BibleFileRoot {
 /// Internal structure for deserializing JSON data from Bible files.
 #[derive(Serialize, Deserialize, Debug)]
 struct FileDataEntry {
-    chapters: Vec<Vec<String>>,
+    chapters: IndexMap<String, IndexMap<String, String>>,
     name: String,
 }
 
@@ -451,18 +451,37 @@ impl Bible {
         // Iterate in map order (IndexMap preserves insertion order)
         let mut books = Vec::with_capacity(map.len());
 
+        fn compare_numeric_keys(a: &str, b: &str) -> Ordering {
+            match (a.parse::<usize>(), b.parse::<usize>()) {
+                (Ok(na), Ok(nb)) => na.cmp(&nb),
+                (Ok(_), Err(_)) => Ordering::Less,
+                (Err(_), Ok(_)) => Ordering::Greater,
+                (Err(_), Err(_)) => a.cmp(b),
+            }
+        }
+
         for (abbrev, entry) in map.into_iter() {
-            let chapters = entry
-                .chapters
+            let mut chapter_entries: Vec<_> = entry.chapters.into_iter().collect();
+            chapter_entries.sort_by(|(a, _), (b, _)| compare_numeric_keys(a, b));
+
+            let chapters = chapter_entries
                 .into_iter()
                 .enumerate()
-                .map(|(chapter_idx, verses)| {
-                    let verses = verses
+                .map(|(chapter_idx, (chapter_key, verses_map))| {
+                    let mut verse_entries: Vec<_> = verses_map.into_iter().collect();
+                    verse_entries.sort_by(|(a, _), (b, _)| compare_numeric_keys(a, b));
+
+                    let verses = verse_entries
                         .into_iter()
                         .enumerate()
-                        .map(|(verse_idx, verse_text)| Verse::new(verse_text, verse_idx + 1))
+                        .map(|(verse_idx, (verse_key, verse_text))| {
+                            let verse_number = verse_key.parse::<usize>().unwrap_or(verse_idx + 1);
+                            Verse::new(verse_text, verse_number)
+                        })
                         .collect::<Vec<_>>();
-                    Chapter::new(verses, chapter_idx + 1)
+
+                    let chapter_number = chapter_key.parse::<usize>().unwrap_or(chapter_idx + 1);
+                    Chapter::new(verses, chapter_number)
                 })
                 .collect::<Vec<_>>();
 
@@ -569,5 +588,53 @@ mod tests {
         assert_eq!(bible.resolve_book("Ge"), Some(BibleBook::Genesis));
         assert_eq!(bible.resolve_book("Jn"), Some(BibleBook::John));
         assert_eq!(bible.resolve_book("Rev"), Some(BibleBook::Revelation));
+    }
+
+    #[test]
+    fn test_new_from_map_with_meta_orders_entries() {
+        let mut chapter_two = IndexMap::new();
+        chapter_two.insert("2".to_string(), "Second chapter second".to_string());
+        chapter_two.insert("1".to_string(), "Second chapter first".to_string());
+
+        let mut chapter_one = IndexMap::new();
+        chapter_one.insert("3".to_string(), "Third".to_string());
+        chapter_one.insert("1".to_string(), "First".to_string());
+        chapter_one.insert("2".to_string(), "Second".to_string());
+
+        let mut chapters = IndexMap::new();
+        chapters.insert("2".to_string(), chapter_two);
+        chapters.insert("1".to_string(), chapter_one);
+
+        let mut books = IndexMap::new();
+        books.insert(
+            "gn".to_string(),
+            FileDataEntry {
+                chapters,
+                name: "Genesis".to_string(),
+            },
+        );
+
+        let bible = Bible::new_from_map_with_meta(
+            books,
+            "id".to_string(),
+            "Test".to_string(),
+            "desc".to_string(),
+            "lang".to_string(),
+        );
+
+        let book = bible.get_book(BibleBook::Genesis).unwrap();
+        let chapter_numbers: Vec<_> = book.chapters().iter().map(|c| c.number()).collect();
+        assert_eq!(chapter_numbers, vec![1, 2]);
+
+        let first_chapter_verses = book.chapters()[0].get_verses();
+        let verse_numbers: Vec<_> = first_chapter_verses.iter().map(|v| v.number()).collect();
+        assert_eq!(verse_numbers, vec![1, 2, 3]);
+        let verse_texts: Vec<_> = first_chapter_verses.iter().map(|v| v.text()).collect();
+        assert_eq!(verse_texts, vec!["First", "Second", "Third"]);
+
+        let second_chapter_verses = book.chapters()[1].get_verses();
+        let second_chapter_numbers: Vec<_> =
+            second_chapter_verses.iter().map(|v| v.number()).collect();
+        assert_eq!(second_chapter_numbers, vec![1, 2]);
     }
 }
