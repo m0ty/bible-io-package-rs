@@ -10,7 +10,7 @@ fn test_library_imports() {
     use bible_io::Verse;
 
     // Create a simple verse to test the import
-    let verse = Verse::new("Test verse".to_string(), 1);
+    let verse = Verse::new(BibleBook::Genesis, 1, 1, "Test verse".to_string());
     // Note: We can't access private fields in integration tests
     // This test just verifies the import works
     assert_eq!(format!("{}", verse), "1: Test verse");

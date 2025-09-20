@@ -71,10 +71,11 @@ impl fmt::Display for Chapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bible_books_enum::BibleBook;
 
     #[test]
     fn test_new_and_accessors() {
-        let verses = vec![Verse::new("Test".into(), 1)];
+        let verses = vec![Verse::new(BibleBook::Genesis, 1, 1, "Test".into())];
         let chapter = Chapter::new(verses, 1);
         assert_eq!(chapter.number(), 1);
         assert_eq!(chapter.get_verses().len(), 1);
@@ -84,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_clone_independence() {
-        let verses = vec![Verse::new("Clone".into(), 1)];
+        let verses = vec![Verse::new(BibleBook::Genesis, 1, 1, "Clone".into())];
         let original = Chapter::new(verses, 1);
         let cloned = original.clone();
 
