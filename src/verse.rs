@@ -1,10 +1,14 @@
 use std::fmt;
 
+use crate::bible_books_enum::BibleBook;
+
 /// Represents a single verse from the Bible.
 ///
-/// A verse contains the text content and its verse number within a chapter.
-#[derive(Debug, Clone)]
+/// A verse contains the text content and its reference information within a chapter.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Verse {
+    book: BibleBook,
+    chapter_number: usize,
     verse_text: String,
     verse_number: usize,
 }
@@ -14,13 +18,32 @@ impl Verse {
     ///
     /// # Arguments
     ///
-    /// * `verse_text` - The text content of the verse
+    /// * `book` - The book this verse belongs to
+    /// * `chapter_number` - The chapter number within the book
     /// * `verse_number` - The verse number within its chapter
-    pub fn new(verse_text: String, verse_number: usize) -> Self {
+    /// * `verse_text` - The text content of the verse
+    pub fn new(
+        book: BibleBook,
+        chapter_number: usize,
+        verse_number: usize,
+        verse_text: String,
+    ) -> Self {
         Verse {
+            book,
+            chapter_number,
             verse_text: sanitize_verse_text(verse_text),
             verse_number,
         }
+    }
+
+    /// Returns the book this verse belongs to.
+    pub fn book(&self) -> BibleBook {
+        self.book
+    }
+
+    /// Returns the chapter number within the book.
+    pub fn chapter(&self) -> usize {
+        self.chapter_number
     }
 
     /// Returns the text content of the verse.
@@ -53,7 +76,9 @@ mod tests {
 
     #[test]
     fn test_new_and_accessors() {
-        let verse = Verse::new("Test".to_string(), 1);
+        let verse = Verse::new(BibleBook::Genesis, 1, 1, "Test".to_string());
+        assert_eq!(verse.book(), BibleBook::Genesis);
+        assert_eq!(verse.chapter(), 1);
         assert_eq!(verse.text(), "Test");
         assert_eq!(verse.number(), 1);
         assert_eq!(format!("{}", verse), "1: Test");
@@ -61,15 +86,17 @@ mod tests {
 
     #[test]
     fn test_sanitize_verse_text() {
-        let verse = Verse::new("In {the} beginning".to_string(), 1);
+        let verse = Verse::new(BibleBook::Genesis, 1, 1, "In {the} beginning".to_string());
         assert_eq!(verse.text(), "In the beginning");
     }
 
     #[test]
     fn test_clone_independence() {
-        let original = Verse::new("Clone me".to_string(), 42);
+        let original = Verse::new(BibleBook::Genesis, 1, 42, "Clone me".to_string());
         let cloned = original.clone();
 
+        assert_eq!(original.book(), cloned.book());
+        assert_eq!(original.chapter(), cloned.chapter());
         assert_eq!(original.text(), cloned.text());
         assert_eq!(original.number(), cloned.number());
 

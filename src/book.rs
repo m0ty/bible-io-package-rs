@@ -121,10 +121,10 @@ impl fmt::Display for Book {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::verse::Verse;
+    use crate::{bible_books_enum::BibleBook, verse::Verse};
 
     fn create_test_chapter() -> Chapter {
-        let verses = vec![Verse::new("Test".into(), 1)];
+        let verses = vec![Verse::new(BibleBook::Genesis, 1, 1, "Test".into())];
         Chapter::new(verses, 1)
     }
 

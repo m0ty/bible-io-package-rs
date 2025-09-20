@@ -296,8 +296,8 @@ impl Bible {
     /// Searches the Bible for verses containing all terms in the query.
     ///
     /// A tokenized search index is built on first use and reused on subsequent
-    /// queries, providing fast lookups while keeping the public API unchanged.
-    pub fn search(&mut self, query: &str) -> Vec<(BibleBook, usize, usize)> {
+    /// queries, providing fast lookups while returning cloned verse data for each match.
+    pub fn search(&mut self, query: &str) -> Vec<Verse> {
         if query.is_empty() {
             return Vec::new();
         }
@@ -308,7 +308,12 @@ impl Bible {
         }
 
         // Safe to unwrap: ensured Some above
-        self.search_index.as_ref().unwrap().search(query)
+        let matches = self.search_index.as_ref().unwrap().search(query);
+
+        matches
+            .into_iter()
+            .filter_map(|(book, chapter, verse)| self.get_verse(book, chapter, verse).ok().cloned())
+            .collect()
     }
 
     /// Builds a search index for faster repeated searches.
@@ -316,15 +321,13 @@ impl Bible {
         let mut map: HashMap<String, Vec<(BibleBook, usize, usize)>> = HashMap::new();
 
         for book in &self.books {
-            if let Ok(book_enum) = BibleBook::from_str(book.abbrev()) {
-                for (chapter_idx, chapter) in book.chapters().iter().enumerate() {
-                    for verse in chapter.get_verses() {
-                        for term in SearchIndex::tokenize(verse.text()) {
-                            let entry = map.entry(term).or_default();
-                            let tuple = (book_enum, chapter_idx + 1, verse.number());
-                            if !entry.contains(&tuple) {
-                                entry.push(tuple);
-                            }
+            for chapter in book.chapters() {
+                for verse in chapter.get_verses() {
+                    for term in SearchIndex::tokenize(verse.text()) {
+                        let entry = map.entry(term).or_default();
+                        let tuple = (verse.book(), verse.chapter(), verse.number());
+                        if !entry.contains(&tuple) {
+                            entry.push(tuple);
                         }
                     }
                 }
@@ -512,6 +515,12 @@ impl Bible {
         let mut books = Vec::with_capacity(map.len());
 
         for (abbrev, entry) in map.into_iter() {
+            let book_enum = BibleBook::from_str(&abbrev).unwrap_or_else(|_| {
+                panic!(
+                    "Unknown book abbreviation '{}' encountered while building Bible data",
+                    abbrev
+                )
+            });
             let chapters = entry
                 .chapters
                 .into_iter()
@@ -520,7 +529,9 @@ impl Bible {
                     let verses = verses
                         .into_iter()
                         .enumerate()
-                        .map(|(verse_idx, verse_text)| Verse::new(verse_text, verse_idx + 1))
+                        .map(|(verse_idx, verse_text)| {
+                            Verse::new(book_enum, chapter_idx + 1, verse_idx + 1, verse_text)
+                        })
                         .collect::<Vec<_>>();
                     Chapter::new(verses, chapter_idx + 1)
                 })
@@ -578,7 +589,7 @@ mod tests {
     use std::collections::HashMap;
 
     fn create_test_bible() -> Bible {
-        let verse = Verse::new("In the beginning".to_string(), 1);
+        let verse = Verse::new(BibleBook::Genesis, 1, 1, "In the beginning".to_string());
         let chapter = Chapter::new(vec![verse], 1);
         let book = Book::new("GN".to_string(), "Genesis".to_string(), vec![chapter]);
         let mut index_by_abbrev = HashMap::new();
