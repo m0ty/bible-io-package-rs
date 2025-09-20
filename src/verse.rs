@@ -18,7 +18,7 @@ impl Verse {
     /// * `verse_number` - The verse number within its chapter
     pub fn new(verse_text: String, verse_number: usize) -> Self {
         Verse {
-            verse_text,
+            verse_text: sanitize_verse_text(verse_text),
             verse_number,
         }
     }
@@ -32,6 +32,13 @@ impl Verse {
     pub fn number(&self) -> usize {
         self.verse_number
     }
+}
+
+fn sanitize_verse_text(verse_text: String) -> String {
+    verse_text
+        .chars()
+        .filter(|c| *c != '{' && *c != '}')
+        .collect()
 }
 
 impl fmt::Display for Verse {
@@ -50,6 +57,12 @@ mod tests {
         assert_eq!(verse.text(), "Test");
         assert_eq!(verse.number(), 1);
         assert_eq!(format!("{}", verse), "1: Test");
+    }
+
+    #[test]
+    fn test_sanitize_verse_text() {
+        let verse = Verse::new("In {the} beginning".to_string(), 1);
+        assert_eq!(verse.text(), "In the beginning");
     }
 
     #[test]

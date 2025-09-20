@@ -2,7 +2,7 @@ use std::{collections::HashMap, error::Error, fmt, fs, str::FromStr};
 
 use indexmap::IndexMap;
 use phf::phf_map;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize};
 use simd_json::serde::from_slice as simd_from_slice;
 
 use crate::{
@@ -98,8 +98,68 @@ struct BibleFileRoot {
 /// Internal structure for deserializing JSON data from Bible files.
 #[derive(Serialize, Deserialize, Debug)]
 struct FileDataEntry {
+    #[serde(deserialize_with = "deserialize_chapters")]
     chapters: Vec<Vec<String>>,
     name: String,
+}
+
+fn deserialize_chapters<'de, D>(deserializer: D) -> Result<Vec<Vec<String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ChaptersHelper {
+        Array(Vec<Vec<String>>),
+        Map(IndexMap<String, IndexMap<String, String>>),
+    }
+
+    let helper = ChaptersHelper::deserialize(deserializer)?;
+
+    match helper {
+        ChaptersHelper::Array(chapters) => Ok(chapters),
+        ChaptersHelper::Map(map) => map
+            .into_iter()
+            .map(|(chapter_key, verses)| {
+                let chapter_num = chapter_key.parse::<usize>().map_err(|_| {
+                    de::Error::custom(format!(
+                        "Invalid chapter key '{}': expected positive integer",
+                        chapter_key
+                    ))
+                })?;
+
+                let mut verses_vec = verses
+                    .into_iter()
+                    .map(|(verse_key, text)| {
+                        let verse_num = verse_key.parse::<usize>().map_err(|_| {
+                            de::Error::custom(format!(
+                                "Invalid verse key '{}': expected positive integer",
+                                verse_key
+                            ))
+                        })?;
+
+                        Ok((verse_num, text))
+                    })
+                    .collect::<Result<Vec<_>, D::Error>>()?;
+
+                verses_vec.sort_by_key(|(verse_num, _)| *verse_num);
+
+                let verses = verses_vec
+                    .into_iter()
+                    .map(|(_, text)| text)
+                    .collect::<Vec<_>>();
+
+                Ok((chapter_num, verses))
+            })
+            .collect::<Result<Vec<_>, D::Error>>()
+            .map(|mut chapters| {
+                chapters.sort_by_key(|(chapter_num, _)| *chapter_num);
+                chapters
+                    .into_iter()
+                    .map(|(_, verses)| verses)
+                    .collect::<Vec<_>>()
+            }),
+    }
 }
 
 /// Represents the complete Bible with all books, chapters, and verses.
