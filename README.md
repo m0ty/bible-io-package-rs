@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bible-io = "1.0.0"
+bible-io = "1.0.1"
 ```
 
 Basic usage:
@@ -71,6 +71,8 @@ The library expects Bible data in the following JSON format:
 ```
 
 Top-level fields identify the translation. Each entry in `books` uses a book abbreviation (e.g., `"gn"`) and contains a `name` and a `chapters` array, where each chapter is a list of verse strings.
+
+Check https://github.com/m0ty/bible-io-json repository for ready to use bible .json files.
 
 ## Examples
 
