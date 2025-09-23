@@ -1,6 +1,6 @@
 [package]
 name = "bible-io"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 description = "A Rust library for working with Bible text data structures"
 authors = ["Moty Fainer"]
@@ -11,9 +11,9 @@ categories = ["text-processing", "parsing"]
 
 [dependencies]
 serde = { version = "1.0.219", features = ["derive"] }
-simd-json = { version = "0.15.1", features = ["serde_impl"] }
+simd-json = { version = "0.16.0", features = ["serde_impl"] }
 indexmap = { version = "2.10.0", features = ["serde"] }
-phf = { version = "0.11", features = ["macros"] }
+phf = { version = "0.13.1", features = ["macros"] }
 
 [[example]]
 name = "basic_usage"
