@@ -1,4 +1,9 @@
-use std::{collections::HashMap, error::Error, fmt, fs, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    error::Error,
+    fmt, fs,
+    str::FromStr,
+};
 
 use indexmap::IndexMap;
 use phf::phf_map;
@@ -103,6 +108,16 @@ struct FileDataEntry {
     name: String,
 }
 
+#[derive(Debug)]
+struct BibleInitializationData {
+    books: Vec<Book>,
+    search_index: Option<SearchIndex>,
+    id: String,
+    name: String,
+    description: String,
+    language: String,
+}
+
 fn deserialize_chapters<'de, D>(deserializer: D) -> Result<Vec<Vec<String>>, D::Error>
 where
     D: Deserializer<'de>,
@@ -180,6 +195,32 @@ pub struct Bible {
 }
 
 impl Bible {
+    fn from_initialization_data(data: BibleInitializationData) -> Self {
+        let BibleInitializationData {
+            books,
+            search_index,
+            id,
+            name,
+            description,
+            language,
+        } = data;
+
+        let mut index_by_abbrev = HashMap::with_capacity(books.len());
+        for (i, book) in books.iter().enumerate() {
+            index_by_abbrev.insert(book.abbrev().to_ascii_lowercase(), i);
+        }
+
+        Bible {
+            books,
+            index_by_abbrev,
+            search_index,
+            id,
+            name,
+            description,
+            language,
+        }
+    }
+
     pub fn id(&self) -> &str {
         &self.id
     }
@@ -510,9 +551,10 @@ impl Bible {
         name: String,
         description: String,
         language: String,
-    ) -> Self {
+    ) -> BibleInitializationData {
         // Iterate in map order (IndexMap preserves insertion order)
         let mut books = Vec::with_capacity(map.len());
+        let mut search_index_map: HashMap<String, Vec<(BibleBook, usize, usize)>> = HashMap::new();
 
         for (abbrev, entry) in map.into_iter() {
             let book_enum = BibleBook::from_str(&abbrev).unwrap_or_else(|_| {
@@ -521,40 +563,71 @@ impl Bible {
                     abbrev
                 )
             });
-            let chapters = entry
-                .chapters
-                .into_iter()
-                .enumerate()
-                .map(|(chapter_idx, verses)| {
-                    let verses = verses
-                        .into_iter()
-                        .enumerate()
-                        .map(|(verse_idx, verse_text)| {
-                            Verse::new(book_enum, chapter_idx + 1, verse_idx + 1, verse_text)
-                        })
-                        .collect::<Vec<_>>();
-                    Chapter::new(verses, chapter_idx + 1)
-                })
-                .collect::<Vec<_>>();
+
+            let mut chapters = Vec::with_capacity(entry.chapters.len());
+
+            for (chapter_idx, verses) in entry.chapters.into_iter().enumerate() {
+                let chapter_number = chapter_idx + 1;
+                let mut verses_vec = Vec::with_capacity(verses.len());
+
+                for (verse_idx, verse_text) in verses.into_iter().enumerate() {
+                    let verse_number = verse_idx + 1;
+                    let tokens = SearchIndex::tokenize(&verse_text);
+                    let mut seen_terms: HashSet<String> = HashSet::new();
+
+                    for term in tokens {
+                        if seen_terms.insert(term.clone()) {
+                            let location = (book_enum, chapter_number, verse_number);
+                            search_index_map.entry(term).or_default().push(location);
+                        }
+                    }
+
+                    verses_vec.push(Verse::new(
+                        book_enum,
+                        chapter_number,
+                        verse_number,
+                        verse_text,
+                    ));
+                }
+
+                chapters.push(Chapter::new(verses_vec, chapter_number));
+            }
 
             books.push(Book::new(abbrev, entry.name, chapters));
         }
 
-        // Build abbrev index
-        let mut index_by_abbrev = HashMap::with_capacity(books.len());
-        for (i, b) in books.iter().enumerate() {
-            index_by_abbrev.insert(b.abbrev().to_ascii_lowercase(), i);
+        for values in search_index_map.values_mut() {
+            values.sort_by_key(|&(book, chapter, verse)| (book as usize, chapter, verse));
+            values.dedup();
         }
 
-        Bible {
+        let search_index = if search_index_map.is_empty() {
+            None
+        } else {
+            Some(SearchIndex::new(search_index_map))
+        };
+
+        BibleInitializationData {
             books,
-            index_by_abbrev,
-            search_index: None,
+            search_index,
             id,
             name,
             description,
             language,
         }
+    }
+
+    fn load_from_json(json_path: &str) -> Result<BibleInitializationData, Box<dyn Error>> {
+        let mut file_content = fs::read(json_path)?;
+        let root: BibleFileRoot = simd_from_slice(&mut file_content)?;
+
+        Ok(Bible::new_from_map_with_meta(
+            root.books,
+            root.id,
+            root.name,
+            root.description,
+            root.language,
+        ))
     }
 
     /// Creates a new Bible instance from a JSON file.
@@ -568,17 +641,9 @@ impl Bible {
     /// Returns an error if the file cannot be read or if the JSON cannot be
     /// parsed. The JSON should have the structure where each book is a key
     /// with an object containing "name" and "chapters" fields.
-    pub fn new_from_json(json_path: &str) -> Result<Self, Box<dyn Error>> {
-        let mut file_content = fs::read(json_path)?;
-        let root: BibleFileRoot = simd_from_slice(&mut file_content)?;
-
-        Ok(Bible::new_from_map_with_meta(
-            root.books,
-            root.id,
-            root.name,
-            root.description,
-            root.language,
-        ))
+    pub fn new(json_path: &str) -> Result<Self, Box<dyn Error>> {
+        let initialization_data = Bible::load_from_json(json_path)?;
+        Ok(Bible::from_initialization_data(initialization_data))
     }
 }
 

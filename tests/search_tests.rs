@@ -13,7 +13,7 @@ fn search_finds_multiple_books() {
         }
     };
 
-    let mut bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
+    let mut bible = Bible::new(&file_path).expect("Failed to load Bible JSON");
     let index = bible.build_search_index();
     let query = "in the beginning";
     let search_results = bible.search(query);
@@ -52,7 +52,7 @@ fn search_is_case_insensitive() {
         }
     };
 
-    let mut bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
+    let mut bible = Bible::new(&file_path).expect("Failed to load Bible JSON");
     let index = bible.build_search_index();
     let query = "REJOICE EVERMORE";
     let search_results = bible.search(query);

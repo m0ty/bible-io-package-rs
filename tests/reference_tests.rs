@@ -13,7 +13,7 @@ fn test_get_verse_by_reference_valid() {
         }
     };
 
-    let bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
+    let bible = Bible::new(&file_path).expect("Failed to load Bible JSON");
 
     let verse = bible
         .get_verse_by_reference("Gen 1:1")
@@ -60,7 +60,7 @@ fn test_get_verse_by_reference_invalid() {
         }
     };
 
-    let bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
+    let bible = Bible::new(&file_path).expect("Failed to load Bible JSON");
     assert!(matches!(
         bible.get_verse_by_reference("Unknown 1:1"),
         Err(BibleError::BookNotFound { .. })
