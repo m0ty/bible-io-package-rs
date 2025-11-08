@@ -22,7 +22,7 @@ Basic usage:
 use rust_bible_struct::{Bible, BibleBook};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let bible = Bible::new_from_json("path/to/bible.json")?;
+    let bible = Bible::new("path/to/bible.json")?;
 
     // Get a specific verse
     if let Ok(verse) = bible.get_verse(BibleBook::Genesis, 1, 1) {

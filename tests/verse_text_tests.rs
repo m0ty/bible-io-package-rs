@@ -85,7 +85,7 @@ fn test_first_and_last_verses_of_each_book() {
         }
     };
 
-    let bible = Bible::new_from_json(&file_path).expect("Failed to load Bible JSON");
+    let bible = Bible::new(&file_path).expect("Failed to load Bible JSON");
 
     for (book, (f_ch, f_vs, f_text), (l_ch, l_vs, l_text)) in VERSE_CASES {
         let verse = bible
