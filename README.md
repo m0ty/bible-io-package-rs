@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bible-io = "1.0.1"
+bible-io = "1.0.2"
 ```
 
 Basic usage:
