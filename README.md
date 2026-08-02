@@ -6,6 +6,9 @@ A Rust library for working with Bible text data structures, providing efficient 
 
 - Parse Bible data from JSON files
 - Access books, chapters, and verses by various identifiers
+- Parse multilingual human-readable references with
+  [`bible-io-references`](https://crates.io/crates/bible-io-references)
+- Use the shared 83-book `BibleBook` model, including deuterocanonical books
 
 ## Usage
 
@@ -19,13 +22,18 @@ bible-io = "1.0.2"
 Basic usage:
 
 ```rust
-use rust_bible_struct::{Bible, BibleBook};
+use bible_io::{Bible, BibleBook};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bible = Bible::new("path/to/bible.json")?;
 
     // Get a specific verse
     if let Ok(verse) = bible.get_verse(BibleBook::Genesis, 1, 1) {
+        println!("{}", verse);
+    }
+
+    // Parse and retrieve a human-readable reference
+    if let Ok(verse) = bible.get_verse_by_reference("John 3:16") {
         println!("{}", verse);
     }
 
@@ -97,4 +105,4 @@ cargo test --test integration_tests
 
 ## License
 
-MIT License - see LICENSE file for details.
+GNU Affero General Public License v3.0 only. See LICENSE for details.

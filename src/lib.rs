@@ -10,6 +10,9 @@ pub mod chapter;
 pub mod search_index;
 pub mod verse;
 
+// Expose the shared reference package and retain the established BibleBook name.
+pub use bible_io_references;
+
 // Re-export main types for easier access
 pub use bible::{Bible, BibleError};
 pub use bible_books_enum::BibleBook;

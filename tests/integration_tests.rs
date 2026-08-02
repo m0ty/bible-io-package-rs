@@ -23,9 +23,9 @@ fn test_bible_book_enum_import() {
     let psalms = BibleBook::Psalms;
     let revelation = BibleBook::Revelation;
 
-    assert_eq!(genesis.as_str(), "gn");
-    assert_eq!(psalms.as_str(), "ps");
-    assert_eq!(revelation.as_str(), "re");
+    assert_eq!(genesis.abbreviation(), "gn");
+    assert_eq!(psalms.abbreviation(), "ps");
+    assert_eq!(revelation.abbreviation(), "re");
 }
 
 #[test]
@@ -64,20 +64,20 @@ fn test_bible_creation_with_real_data() {
 
 #[test]
 fn test_bible_book_display_format() {
-    // Test that the Display trait works correctly
+    // The shared reference package displays canonical English book names.
     let genesis = BibleBook::Genesis;
     let psalms = BibleBook::Psalms;
 
-    assert_eq!(format!("{}", genesis), "gn");
-    assert_eq!(format!("{}", psalms), "ps");
+    assert_eq!(format!("{}", genesis), "Genesis");
+    assert_eq!(format!("{}", psalms), "Psalms");
 }
 
 #[test]
 fn test_bible_book_from_str_invalid() {
-    // Test that invalid strings return Err
-    assert_eq!(BibleBook::from_str("invalid"), Err(ParseBibleBookError));
-    assert_eq!(BibleBook::from_str(""), Err(ParseBibleBookError));
-    assert_eq!(BibleBook::from_str("xyz"), Err(ParseBibleBookError));
+    for input in ["invalid", "", "xyz"] {
+        let error: ParseBibleBookError = BibleBook::from_str(input).unwrap_err();
+        assert_eq!(error.input(), input);
+    }
 }
 
 #[test]

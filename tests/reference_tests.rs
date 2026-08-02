@@ -28,6 +28,18 @@ fn test_get_verse_by_reference_valid() {
         .expect("Verse not found");
     assert!(verse.text().starts_with("For God so loved the world"));
 
+    // The shared parser also accepts adjacent coordinates.
+    let verse = bible
+        .get_verse_by_reference("Jn3:16")
+        .expect("Verse not found");
+    assert!(verse.text().starts_with("For God so loved the world"));
+
+    // Bundled localized book names work without package-local lookup tables.
+    let verse = bible
+        .get_verse_by_reference("Juan 3:16")
+        .expect("Verse not found");
+    assert!(verse.text().starts_with("For God so loved the world"));
+
     let verse = bible
         .get_verse_by_reference("Exo 3:14")
         .expect("Verse not found");
@@ -70,7 +82,7 @@ fn test_get_verse_by_reference_invalid() {
         Err(BibleError::InvalidReference { input }) if input == "Genesis 1"
     ));
     assert!(matches!(
-        bible.get_verse_by_reference("Jn3:16"),
-        Err(BibleError::InvalidReference { input }) if input == "Jn3:16"
+        bible.get_verse_by_reference("Jn 3:16-17"),
+        Err(BibleError::InvalidReference { input }) if input == "Jn 3:16-17"
     ));
 }

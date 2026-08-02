@@ -2,11 +2,10 @@ use std::{
     collections::{HashMap, HashSet},
     error::Error,
     fmt, fs,
-    str::FromStr,
 };
 
+use bible_io_references::{Language, ParseErrorKind, ReferenceParser};
 use indexmap::IndexMap;
-use phf::phf_map;
 use serde::{de, Deserialize, Deserializer, Serialize};
 use simd_json::serde::from_slice as simd_from_slice;
 
@@ -118,6 +117,64 @@ struct BibleInitializationData {
     language: String,
 }
 
+// These aliases preserve the handful of historical inputs that are not
+// equivalent in bible-io-references. The shared parser handles everything else.
+const LEGACY_REFERENCE_ALIASES: &[(&str, BibleBook)] = &[
+    ("ge", BibleBook::Genesis),
+    ("le", BibleBook::Leviticus),
+    ("nu", BibleBook::Numbers),
+    ("sos", BibleBook::SongOfSolomon),
+    ("songofsongs", BibleBook::SongOfSolomon),
+    ("da", BibleBook::Daniel),
+    ("joe", BibleBook::Joel),
+    ("1thes", BibleBook::FirstThessalonians),
+    ("2thes", BibleBook::SecondThessalonians),
+    ("jam", BibleBook::James),
+    ("estg", BibleBook::EstherAdditions),
+    ("dan3", BibleBook::DanielSongOfThree),
+    ("jn", BibleBook::John),
+    ("jud", BibleBook::Jude),
+];
+
+fn build_reference_parser(books: &[Book], language: &str) -> ReferenceParser {
+    let mut builder = ReferenceParser::builder();
+
+    if let Ok(language) = language.parse::<Language>() {
+        if !language.is_auto() && language.is_parsing_supported() {
+            builder = builder.preferred_languages([language]);
+        }
+    }
+
+    for &(alias, book) in LEGACY_REFERENCE_ALIASES {
+        builder = builder.alias(alias, book);
+    }
+
+    // Preserve support for translation-specific titles from the loaded JSON.
+    for book in books {
+        if let Some(book_id) = BibleBook::from_abbreviation(book.abbrev()) {
+            builder = builder.alias(book.title(), book_id);
+        }
+    }
+
+    builder
+        .build()
+        .expect("the compatibility reference parser configuration is valid")
+}
+
+fn reference_book_token(reference: &str) -> &str {
+    let before_verse = reference
+        .rfind([':', '.'])
+        .map_or(reference, |separator| &reference[..separator]);
+    let book = before_verse
+        .trim_end_matches(|character: char| character.is_whitespace() || character.is_numeric());
+
+    if book.is_empty() {
+        reference.trim()
+    } else {
+        book.trim()
+    }
+}
+
 fn deserialize_chapters<'de, D>(deserializer: D) -> Result<Vec<Vec<String>>, D::Error>
 where
     D: Deserializer<'de>,
@@ -184,6 +241,7 @@ where
 pub struct Bible {
     books: Vec<Book>,
     index_by_abbrev: HashMap<String, usize>,
+    reference_parser: ReferenceParser,
 
     /// Lazily constructed search index for verse lookups.
     search_index: Option<SearchIndex>,
@@ -210,9 +268,12 @@ impl Bible {
             index_by_abbrev.insert(book.abbrev().to_ascii_lowercase(), i);
         }
 
+        let reference_parser = build_reference_parser(&books, &language);
+
         Bible {
             books,
             index_by_abbrev,
+            reference_parser,
             search_index,
             id,
             name,
@@ -244,7 +305,7 @@ impl Bible {
 
     /// Returns a book by its BibleBook enum value.
     pub fn get_book(&self, book: BibleBook) -> Result<&Book, BibleError> {
-        self.get_book_by_abbrev(book.as_str())
+        self.get_book_by_abbrev(book.abbreviation())
     }
 
     /// Returns a book by its abbreviation string.
@@ -254,9 +315,9 @@ impl Bible {
             .get(key.as_str())
             .and_then(|&i| self.books.get(i))
             .ok_or_else(|| {
-                let book_name = BibleBook::from_str(&key)
-                    .map(|b| b.full_name().to_string())
-                    .unwrap_or_else(|_| key.clone());
+                let book_name = BibleBook::from_abbreviation(&key)
+                    .map(|book| book.full_name().to_string())
+                    .unwrap_or_else(|| key.clone());
                 BibleError::BookNotFound {
                     book_abbrev: key.clone(),
                     book_name,
@@ -286,52 +347,35 @@ impl Bible {
 
     /// Returns a specific verse using a human-readable reference string.
     ///
-    /// The reference should be in the form "Book Chapter:Verse", for example
-    /// `"Genesis 1:1"` or `"Jn 3:16"`. Common book abbreviations are
-    /// supported.
+    /// Parsing is provided by `bible-io-references`, including compact and
+    /// common book abbreviations, localized names, Unicode syntax, and either
+    /// spaced or adjacent coordinates. Ranges are rejected by this single-verse
+    /// lookup API.
     pub fn get_verse_by_reference(&self, reference: &str) -> Result<&Verse, BibleError> {
         let reference = reference.trim();
-
-        // Split verse part
-        let (book_and_chapter, verse_str) =
-            reference
-                .rsplit_once(':')
-                .ok_or_else(|| BibleError::InvalidReference {
-                    input: reference.to_string(),
-                })?;
-        let verse_number: usize =
-            verse_str
-                .trim()
-                .parse()
-                .map_err(|_| BibleError::InvalidReference {
-                    input: reference.to_string(),
-                })?;
-
-        // Split chapter part
-        let (book_str, chapter_str) =
-            book_and_chapter
-                .rsplit_once(' ')
-                .ok_or_else(|| BibleError::InvalidReference {
-                    input: reference.to_string(),
-                })?;
-        let chapter_number: usize =
-            chapter_str
-                .trim()
-                .parse()
-                .map_err(|_| BibleError::InvalidReference {
-                    input: reference.to_string(),
-                })?;
-
-        // Resolve the book reference
-        let book = self
-            .resolve_book(book_str.trim())
-            .ok_or_else(|| BibleError::BookNotFound {
-                book_abbrev: book_str.trim().to_ascii_lowercase(),
-                book_name: book_str.trim().to_string(),
-                translation: self.name.clone(),
+        let parsed = self
+            .reference_parser
+            .parse_verse(reference)
+            .map_err(|error| {
+                if error.kind() == ParseErrorKind::UnknownBook {
+                    let book_name = reference_book_token(reference);
+                    BibleError::BookNotFound {
+                        book_abbrev: book_name.to_ascii_lowercase(),
+                        book_name: book_name.to_string(),
+                        translation: self.name.clone(),
+                    }
+                } else {
+                    BibleError::InvalidReference {
+                        input: reference.to_string(),
+                    }
+                }
             })?;
 
-        self.get_verse(book, chapter_number, verse_number)
+        self.get_verse(
+            parsed.book(),
+            usize::from(parsed.chapter()),
+            usize::from(parsed.verse()),
+        )
     }
 
     /// Searches the Bible for verses containing all terms in the query.
@@ -382,169 +426,6 @@ impl Bible {
         SearchIndex::new(map)
     }
 
-    fn resolve_book(&self, input: &str) -> Option<BibleBook> {
-        let lower = input.to_ascii_lowercase();
-
-        static ALT_ABBREVS: phf::Map<&'static str, BibleBook> = phf_map! {
-            // --- Protestant (66) ---
-            "gen" => BibleBook::Genesis,
-            "ge" => BibleBook::Genesis,
-            "exo" => BibleBook::Exodus,
-            "exod" => BibleBook::Exodus,
-            "lev" => BibleBook::Leviticus,
-            "le" => BibleBook::Leviticus,
-            "num" => BibleBook::Numbers,
-            "nu" => BibleBook::Numbers,
-            "deut" => BibleBook::Deuteronomy,
-            "deu" => BibleBook::Deuteronomy,
-            "jos" => BibleBook::Joshua,
-            "josh" => BibleBook::Joshua,
-            "jdg" => BibleBook::Judges,
-            "judg" => BibleBook::Judges,
-            "rut" => BibleBook::Ruth,
-            "ru" => BibleBook::Ruth,
-            "1sa" => BibleBook::FirstSamuel,
-            "1sam" => BibleBook::FirstSamuel,
-            "2sa" => BibleBook::SecondSamuel,
-            "2sam" => BibleBook::SecondSamuel,
-            "1ki" => BibleBook::FirstKings,
-            "1kings" => BibleBook::FirstKings,
-            "2ki" => BibleBook::SecondKings,
-            "2kings" => BibleBook::SecondKings,
-            "1ch" => BibleBook::FirstChronicles,
-            "1chr" => BibleBook::FirstChronicles,
-            "2ch" => BibleBook::SecondChronicles,
-            "2chr" => BibleBook::SecondChronicles,
-            "ezr" => BibleBook::Ezra,
-            "ezra" => BibleBook::Ezra,
-            "neh" => BibleBook::Nehemiah,
-            "ne" => BibleBook::Nehemiah,
-            "est" => BibleBook::Esther,
-            "esth" => BibleBook::Esther,
-            "job" => BibleBook::Job,
-            "jb" => BibleBook::Job,
-            "psa" => BibleBook::Psalms,
-            "psalm" => BibleBook::Psalms,
-            "psalms" => BibleBook::Psalms,
-            "pro" => BibleBook::Proverbs,
-            "prov" => BibleBook::Proverbs,
-            "ecc" => BibleBook::Ecclesiastes,
-            "eccl" => BibleBook::Ecclesiastes,
-            "sos" => BibleBook::SongOfSolomon,
-            "song" => BibleBook::SongOfSolomon,
-            "songofsongs" => BibleBook::SongOfSolomon,
-            "isa" => BibleBook::Isaiah,
-            "jer" => BibleBook::Jeremiah,
-            "lam" => BibleBook::Lamentations,
-            "ezek" => BibleBook::Ezekiel,
-            "eze" => BibleBook::Ezekiel,
-            "dan" => BibleBook::Daniel,
-            "da" => BibleBook::Daniel,
-            "hos" => BibleBook::Hosea,
-            "joe" => BibleBook::Joel,
-            "amo" => BibleBook::Amos,
-            "oba" => BibleBook::Obadiah,
-            "obad" => BibleBook::Obadiah,
-            "jon" => BibleBook::Jonah,
-            "jnh" => BibleBook::Jonah,
-            "mic" => BibleBook::Micah,
-            "nah" => BibleBook::Nahum,
-            "hab" => BibleBook::Habakkuk,
-            "zep" => BibleBook::Zephaniah,
-            "zeph" => BibleBook::Zephaniah,
-            "hag" => BibleBook::Haggai,
-            "zec" => BibleBook::Zechariah,
-            "zech" => BibleBook::Zechariah,
-            "mal" => BibleBook::Malachi,
-            "mat" => BibleBook::Matthew,
-            "matt" => BibleBook::Matthew,
-            "mar" => BibleBook::Mark,
-            "mrk" => BibleBook::Mark,
-            "luk" => BibleBook::Luke,
-            "luke" => BibleBook::Luke,
-            "john" => BibleBook::John,
-            "jhn" => BibleBook::John,
-            "jn" => BibleBook::John,
-            "acts" => BibleBook::Acts,
-            "ac" => BibleBook::Acts,
-            "rom" => BibleBook::Romans,
-            "1co" => BibleBook::FirstCorinthians,
-            "1cor" => BibleBook::FirstCorinthians,
-            "2co" => BibleBook::SecondCorinthians,
-            "2cor" => BibleBook::SecondCorinthians,
-            "gal" => BibleBook::Galatians,
-            "eph" => BibleBook::Ephesians,
-            "phil" => BibleBook::Philippians,
-            "php" => BibleBook::Philippians,
-            "col" => BibleBook::Colossians,
-            "1th" => BibleBook::FirstThessalonians,
-            "1thes" => BibleBook::FirstThessalonians,
-            "2th" => BibleBook::SecondThessalonians,
-            "2thes" => BibleBook::SecondThessalonians,
-            "1ti" => BibleBook::FirstTimothy,
-            "1tim" => BibleBook::FirstTimothy,
-            "2ti" => BibleBook::SecondTimothy,
-            "2tim" => BibleBook::SecondTimothy,
-            "tit" => BibleBook::Titus,
-            "phm" => BibleBook::Philemon,
-            "phlm" => BibleBook::Philemon,
-            "philemon" => BibleBook::Philemon,
-            "heb" => BibleBook::Hebrews,
-            "jas" => BibleBook::James,
-            "jam" => BibleBook::James,
-            "1pe" => BibleBook::FirstPeter,
-            "1pet" => BibleBook::FirstPeter,
-            "2pe" => BibleBook::SecondPeter,
-            "2pet" => BibleBook::SecondPeter,
-            "1jn" => BibleBook::FirstJohn,
-            "1joh" => BibleBook::FirstJohn,
-            "2jn" => BibleBook::SecondJohn,
-            "2joh" => BibleBook::SecondJohn,
-            "3jn" => BibleBook::ThirdJohn,
-            "3joh" => BibleBook::ThirdJohn,
-            "jud" => BibleBook::Jude,
-            "jude" => BibleBook::Jude,
-            "rev" => BibleBook::Revelation,
-            "revelation" => BibleBook::Revelation,
-            // --- Catholic Deuterocanon ---
-            "tob" => BibleBook::Tobit,
-            "jdt" => BibleBook::Judith,
-            "wis" => BibleBook::Wisdom,
-            "sir" => BibleBook::Sirach,
-            "bar" => BibleBook::Baruch,
-            "1mac" => BibleBook::FirstMaccabees,
-            "2mac" => BibleBook::SecondMaccabees,
-            "estg" => BibleBook::EstherAdditions,
-            "addesth" => BibleBook::EstherAdditions,
-            "dan3" => BibleBook::DanielSongOfThree,
-            "sus" => BibleBook::DanielSusanna,
-            "bel" => BibleBook::DanielBelAndTheDragon,
-            // --- Eastern Orthodox Additions ---
-            "1esd" => BibleBook::FirstEsdras,
-            "2esd" => BibleBook::SecondEsdras,
-            "man" => BibleBook::PrayerOfManasseh,
-            "prman" => BibleBook::PrayerOfManasseh,
-            "ps151" => BibleBook::Psalm151,
-            "3mac" => BibleBook::ThirdMaccabees,
-            "4mac" => BibleBook::FourthMaccabees,
-        };
-
-        ALT_ABBREVS
-            .get(lower.as_str())
-            .copied()
-            .or_else(|| {
-                // Try official abbreviations
-                BibleBook::from_str(&lower).ok()
-            })
-            .or_else(|| {
-                // Try full book titles from loaded data
-                self.books
-                    .iter()
-                    .find(|b| b.title().eq_ignore_ascii_case(input))
-                    .and_then(|b| BibleBook::from_str(&b.abbrev().to_ascii_lowercase()).ok())
-            })
-    }
-
     fn new_from_map_with_meta(
         map: IndexMap<String, FileDataEntry>,
         id: String,
@@ -557,7 +438,7 @@ impl Bible {
         let mut search_index_map: HashMap<String, Vec<(BibleBook, usize, usize)>> = HashMap::new();
 
         for (abbrev, entry) in map.into_iter() {
-            let book_enum = BibleBook::from_str(&abbrev).unwrap_or_else(|_| {
+            let book_enum = BibleBook::from_abbreviation(&abbrev).unwrap_or_else(|| {
                 panic!(
                     "Unknown book abbreviation '{}' encountered while building Bible data",
                     abbrev
@@ -659,10 +540,13 @@ mod tests {
         let book = Book::new("GN".to_string(), "Genesis".to_string(), vec![chapter]);
         let mut index_by_abbrev = HashMap::new();
         index_by_abbrev.insert("gn".to_string(), 0);
+        let books = vec![book];
+        let reference_parser = build_reference_parser(&books, "English");
 
         Bible {
-            books: vec![book],
+            books,
             index_by_abbrev,
+            reference_parser,
             search_index: None,
             id: "id".to_string(),
             name: "name".to_string(),
@@ -698,12 +582,21 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_book_abbreviations() {
+    fn test_reference_parser_aliases() {
         let bible = create_test_bible();
 
-        assert_eq!(bible.resolve_book("Gen"), Some(BibleBook::Genesis));
-        assert_eq!(bible.resolve_book("Ge"), Some(BibleBook::Genesis));
-        assert_eq!(bible.resolve_book("Jn"), Some(BibleBook::John));
-        assert_eq!(bible.resolve_book("Rev"), Some(BibleBook::Revelation));
+        for &(alias, expected) in LEGACY_REFERENCE_ALIASES {
+            let reference = format!("{alias} 1:1");
+            let parsed = bible.reference_parser.parse_verse(&reference).unwrap();
+            assert_eq!(parsed.book(), expected, "failed to parse {reference}");
+        }
+
+        for (reference, expected) in [
+            ("Gen 1:1", BibleBook::Genesis),
+            ("Rev 1:1", BibleBook::Revelation),
+        ] {
+            let parsed = bible.reference_parser.parse_verse(reference).unwrap();
+            assert_eq!(parsed.book(), expected, "failed to parse {reference}");
+        }
     }
 }
