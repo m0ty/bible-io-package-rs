@@ -31,6 +31,13 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+        with:
+          # `cargo package` creates a temporary nested crate under
+          # target/package. rust-cache's post-job cleaner treats every nested
+          # `tests` directory as a trybuild workspace and probes missing
+          # tests/target and tests/trybuild paths. Restore the CI cache for this
+          # release job, but do not run that faulty cache-save cleanup afterward.
+          save-if: "false"
 
       - name: Validate release tag
         shell: bash
