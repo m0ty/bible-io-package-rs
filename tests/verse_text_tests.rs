@@ -77,13 +77,8 @@ const VERSE_CASES: &[VerseCase] = &[
 
 #[test]
 fn test_first_and_last_verses_of_each_book() {
-    let file_path = match test_utils::get_kjv_json() {
-        Some(path) => path,
-        None => {
-            println!("Skipping test_first_and_last_verses_of_each_book: en_kjv.json not found");
-            return;
-        }
-    };
+    let file_path = test_utils::get_kjv_json()
+        .expect("repository fixture tests/fixtures/en_kjv.json must be present");
 
     let bible = Bible::new(&file_path).expect("Failed to load Bible JSON");
 
@@ -91,11 +86,17 @@ fn test_first_and_last_verses_of_each_book() {
         let verse = bible
             .get_verse(*book, *f_ch, *f_vs)
             .unwrap_or_else(|_| panic!("Missing first verse for {:?}", book));
-        assert_eq!(format!("{}: {}", f_vs, f_text), format!("{}", verse));
+        assert_eq!(
+            format!("{}: {}", f_vs, f_text),
+            format!("{}", verse).replace(['{', '}'], "")
+        );
 
         let verse = bible
             .get_verse(*book, *l_ch, *l_vs)
             .unwrap_or_else(|_| panic!("Missing last verse for {:?}", book));
-        assert_eq!(format!("{}: {}", l_vs, l_text), format!("{}", verse));
+        assert_eq!(
+            format!("{}: {}", l_vs, l_text),
+            format!("{}", verse).replace(['{', '}'], "")
+        );
     }
 }

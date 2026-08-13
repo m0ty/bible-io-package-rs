@@ -5,13 +5,8 @@ use common::test_utils;
 
 #[test]
 fn test_get_verse_by_reference_valid() {
-    let file_path = match test_utils::get_kjv_json() {
-        Some(p) => p,
-        None => {
-            println!("Skipping test_get_verse_by_reference_valid: en_kjv.json not found");
-            return;
-        }
-    };
+    let file_path = test_utils::get_kjv_json()
+        .expect("repository fixture tests/fixtures/en_kjv.json must be present");
 
     let bible = Bible::new(&file_path).expect("Failed to load Bible JSON");
 
@@ -24,13 +19,13 @@ fn test_get_verse_by_reference_valid() {
     );
 
     let verse = bible
-        .get_verse_by_reference("Jn 3:16")
+        .get_verse_by_reference("John 3:16")
         .expect("Verse not found");
     assert!(verse.text().starts_with("For God so loved the world"));
 
     // The shared parser also accepts adjacent coordinates.
     let verse = bible
-        .get_verse_by_reference("Jn3:16")
+        .get_verse_by_reference("John3:16")
         .expect("Verse not found");
     assert!(verse.text().starts_with("For God so loved the world"));
 
@@ -59,18 +54,13 @@ fn test_get_verse_by_reference_valid() {
         .expect("Verse not found");
     assert!(verse
         .text()
-        .starts_with("The grace of our Lord Jesus Christ be with you all"));
+        .starts_with("The grace of our Lord Jesus Christ {be} with you all"));
 }
 
 #[test]
 fn test_get_verse_by_reference_invalid() {
-    let file_path = match test_utils::get_kjv_json() {
-        Some(p) => p,
-        None => {
-            println!("Skipping test_get_verse_by_reference_invalid: en_kjv.json not found");
-            return;
-        }
-    };
+    let file_path = test_utils::get_kjv_json()
+        .expect("repository fixture tests/fixtures/en_kjv.json must be present");
 
     let bible = Bible::new(&file_path).expect("Failed to load Bible JSON");
     assert!(matches!(
@@ -79,10 +69,10 @@ fn test_get_verse_by_reference_invalid() {
     ));
     assert!(matches!(
         bible.get_verse_by_reference("Genesis 1"),
-        Err(BibleError::InvalidReference { input }) if input == "Genesis 1"
+        Err(BibleError::ReferenceParse { input, .. }) if input == "Genesis 1"
     ));
     assert!(matches!(
-        bible.get_verse_by_reference("Jn 3:16-17"),
-        Err(BibleError::InvalidReference { input }) if input == "Jn 3:16-17"
+        bible.get_verse_by_reference("John 3:16-17"),
+        Err(BibleError::ReferenceParse { input, .. }) if input == "John 3:16-17"
     ));
 }

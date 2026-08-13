@@ -30,36 +30,27 @@ fn test_bible_book_enum_import() {
 
 #[test]
 fn test_bible_creation_with_real_data() {
-    // This test requires the en_kjv.json file to exist
-    let file_path = match test_utils::get_kjv_json() {
-        Some(path) => path,
-        None => {
-            // Skip the test if the file doesn't exist
-            println!("Skipping test_bible_creation_with_real_data: en_kjv.json not found");
-            println!("To run this test, place en_kjv.json in tests/fixtures/");
-            return;
-        }
-    };
+    let file_path = test_utils::get_kjv_json()
+        .expect("repository fixture tests/fixtures/en_kjv.json must be present");
 
     println!("Using en_kjv.json at: {}", file_path);
 
     let bible = Bible::new(&file_path).expect("Failed to load Bible JSON");
 
-    // Test that we can get a verse from Genesis
-    if let Ok(verse) = bible.get_verse(BibleBook::Genesis, 1, 1) {
-        // We can't access private fields, but we can test the Display trait
-        let verse_str = format!("{}", verse);
-        assert_eq!(
-            verse_str,
-            "1: In the beginning God created the heaven and the earth."
-        );
-    }
+    let verse = bible
+        .get_verse(BibleBook::Genesis, 1, 1)
+        .expect("Genesis 1:1 must be present in the repository fixture");
+    let verse_str = format!("{}", verse);
+    assert_eq!(
+        verse_str,
+        "1: In the beginning God created the heaven and the earth."
+    );
 
-    // Test that we can get a book
-    if let Ok(book) = bible.get_book(BibleBook::Genesis) {
-        assert_eq!(book.abbrev(), "gn");
-        assert_eq!(book.title(), "Genesis");
-    }
+    let book = bible
+        .get_book(BibleBook::Genesis)
+        .expect("Genesis must be present in the repository fixture");
+    assert_eq!(book.abbrev(), "gn");
+    assert_eq!(book.title(), "Genesis");
 }
 
 #[test]

@@ -1,0 +1,77 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "Release-*.*.*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crates-io-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Validate release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$GITHUB_REF_NAME" =~ ^Release-([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "Expected a tag in the form Release-x.x.x, got $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          tag_version="${BASH_REMATCH[1]}"
+
+          manifest_version="$(
+            cargo metadata --no-deps --format-version 1 --locked |
+              jq -r '.packages[] | select(.name == "bible-io") | .version'
+          )"
+          if [[ "$tag_version" != "$manifest_version" ]]; then
+            echo "Tag version $tag_version does not match Cargo.toml version $manifest_version" >&2
+            exit 1
+          fi
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Test all features
+        run: cargo test --all-features --locked
+      - name: Test minimal features
+        run: cargo test --no-default-features --locked
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features --locked -- -D warnings
+      - name: Build documentation
+        run: cargo doc --all-features --no-deps --locked
+        env:
+          RUSTDOCFLAGS: -D warnings -D missing_docs
+      - name: Verify the publishable package
+        run: cargo package --locked
+
+      - name: Authenticate with crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Publish to crates.io
+        run: cargo publish --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
